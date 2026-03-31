@@ -9,12 +9,11 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
 
   const validate = () => {
     const e: typeof errors = {};
     if (!email.trim()) e.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Invalid email';
     if (!password) e.password = 'Password is required';
     else if (password.length < 6) e.password = 'Min 6 characters';
     setErrors(e);
@@ -24,8 +23,17 @@ const Login = () => {
   const handleSubmit = (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
-    login(email, password);
-    navigate('/dashboard');
+    const result = login(email, password);
+    if (!result.success) {
+      setErrors({ general: result.error });
+      return;
+    }
+    // Redirect admin to admin dashboard, others to regular dashboard
+    if (email === 'admin' || email === 'admin@fnis.com') {
+      navigate('/admin-dashboard');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   return (
