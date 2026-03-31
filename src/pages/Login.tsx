@@ -49,6 +49,11 @@ const Login = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-6 space-y-4">
+          {errors.general && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
+              {errors.general}
+            </div>
+          )}
           <div>
             <label className="mb-1 block text-sm font-medium">Email</label>
             <input
