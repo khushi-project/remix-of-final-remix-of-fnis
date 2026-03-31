@@ -7,6 +7,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { NutritionProvider } from "@/context/NutritionContext";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import MealPlanner from "./pages/MealPlanner";
@@ -27,6 +28,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/meals" element={<MealPlanner />} />
