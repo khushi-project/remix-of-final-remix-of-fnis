@@ -9,12 +9,11 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
 
   const validate = () => {
     const e: typeof errors = {};
     if (!email.trim()) e.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Invalid email';
     if (!password) e.password = 'Password is required';
     else if (password.length < 6) e.password = 'Min 6 characters';
     setErrors(e);
@@ -24,8 +23,17 @@ const Login = () => {
   const handleSubmit = (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
-    login(email, password);
-    navigate('/dashboard');
+    const result = login(email, password);
+    if (!result.success) {
+      setErrors({ general: result.error });
+      return;
+    }
+    // Redirect admin to admin dashboard, others to regular dashboard
+    if (email === 'admin' || email === 'admin@fnis.com') {
+      navigate('/admin-dashboard');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   return (
@@ -41,14 +49,19 @@ const Login = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-6 space-y-4">
+          {errors.general && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
+              {errors.general}
+            </div>
+          )}
           <div>
-            <label className="mb-1 block text-sm font-medium">Email</label>
+            <label className="mb-1 block text-sm font-medium">Email or Username</label>
             <input
-              type="email"
+              type="text"
               value={email}
               onChange={e => setEmail(e.target.value)}
               className="w-full rounded-lg border border-border bg-muted px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-primary"
-              placeholder="you@example.com"
+              placeholder="you@example.com or admin"
             />
             {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email}</p>}
           </div>
