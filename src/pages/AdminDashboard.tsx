@@ -180,7 +180,7 @@ const AdminDashboard = () => {
               {/* Add Diet Task Form */}
               <div className="rounded-xl border border-border bg-card p-5">
                 <h2 className="mb-4 font-display font-bold flex items-center gap-2">
-                  <Plus className="h-4 w-4 text-primary" /> Add Diet Task
+                  <Plus className="h-4 w-4 text-primary" /> Add Diet Task and Trainer
                 </h2>
                 <form onSubmit={addDietTask} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
                   <input
