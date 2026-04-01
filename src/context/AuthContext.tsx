@@ -1,16 +1,9 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  age: number;
-  weight: number;
-  height: number;
-  goal: string;
-  role: 'user' | 'admin';
-}
+import {
+  MOCK_ADMIN_ACCOUNT,
+  MOCK_USER_ACCOUNT,
+  type AuthUser as User,
+} from '@/services/mockAuth';
 
 interface AuthContextType {
   user: User | null;
@@ -23,68 +16,70 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'admin123';
+const STORAGE_KEYS = {
+  user: 'fnis_user',
+  isAdmin: 'isAdmin',
+};
 
-const mockUser: User = {
-  id: '1',
-  name: 'Alex Johnson',
-  email: 'alex@example.com',
-  age: 28,
-  weight: 75,
-  height: 178,
-  goal: 'Build Muscle',
-  role: 'user',
+const getStoredUser = (): User | null => {
+  const savedUser = localStorage.getItem(STORAGE_KEYS.user);
+  const isAdmin = localStorage.getItem(STORAGE_KEYS.isAdmin) === 'true';
+
+  if (!savedUser) return isAdmin ? MOCK_ADMIN_ACCOUNT.user : null;
+
+  try {
+    const parsedUser = JSON.parse(savedUser) as User;
+    if (isAdmin) {
+      return { ...MOCK_ADMIN_ACCOUNT.user, ...parsedUser, role: 'admin' };
+    }
+    return parsedUser;
+  } catch {
+    return isAdmin ? MOCK_ADMIN_ACCOUNT.user : null;
+  }
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('fnis_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState<User | null>(getStoredUser);
+
+  const persistUser = (nextUser: User, isAdmin = false) => {
+    setUser(nextUser);
+    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(nextUser));
+    if (isAdmin) {
+      localStorage.setItem(STORAGE_KEYS.isAdmin, 'true');
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.isAdmin);
+    }
+  };
 
   const login = (email: string, password: string): { success: boolean; error?: string } => {
-    // Admin check
-    if (email === ADMIN_USERNAME || email === 'admin@fnis.com') {
-      if (password === ADMIN_PASSWORD) {
-        const adminUser: User = {
-          id: 'admin-1',
-          name: 'Admin',
-          email: 'admin@fnis.com',
-          age: 0,
-          weight: 0,
-          height: 0,
-          goal: '',
-          role: 'admin',
-        };
-        setUser(adminUser);
-        localStorage.setItem('fnis_user', JSON.stringify(adminUser));
-        localStorage.setItem('isAdmin', 'true');
+    const normalizedLogin = email.trim().toLowerCase();
+
+    if (
+      normalizedLogin === MOCK_ADMIN_ACCOUNT.username ||
+      normalizedLogin === MOCK_ADMIN_ACCOUNT.user.email.toLowerCase()
+    ) {
+      if (password === MOCK_ADMIN_ACCOUNT.password) {
+        persistUser(MOCK_ADMIN_ACCOUNT.user, true);
         return { success: true };
       }
       return { success: false, error: 'Invalid admin username or password' };
     }
 
-    // Regular user login
-    const u: User = { ...mockUser, email, role: 'user' };
-    setUser(u);
-    localStorage.setItem('fnis_user', JSON.stringify(u));
-    localStorage.removeItem('isAdmin');
+    const u: User = { ...MOCK_USER_ACCOUNT.user, email, role: 'user' };
+    persistUser(u);
     return { success: true };
   };
 
   const register = (name: string, email: string, _password: string) => {
-    const u: User = { ...mockUser, name, email, role: 'user' };
-    setUser(u);
-    localStorage.setItem('fnis_user', JSON.stringify(u));
-    localStorage.removeItem('isAdmin');
+    const u: User = { ...MOCK_USER_ACCOUNT.user, name, email, role: 'user' };
+    persistUser(u);
     return true;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('fnis_user');
-    localStorage.removeItem('isAdmin');
+    localStorage.removeItem(STORAGE_KEYS.user);
+    localStorage.removeItem(STORAGE_KEYS.isAdmin);
   };
 
   return (
