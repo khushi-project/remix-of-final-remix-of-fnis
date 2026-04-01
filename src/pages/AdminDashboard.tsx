@@ -3,6 +3,14 @@ import { useAuth } from '@/context/AuthContext';
 import AdminSidebar from '@/components/AdminSidebar';
 import { Trash2, CheckCircle, Clock, Plus, Users, Utensils } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { MOCK_TRAINERS } from '@/services/mockTrainers';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface ClientTask {
   id: string;
@@ -17,6 +25,7 @@ interface DietTask {
   calories: number;
   time: 'Breakfast' | 'Lunch' | 'Dinner';
   assignedTo: string;
+  assignedTrainer: string;
 }
 
 const initialClientTasks: ClientTask[] = [
@@ -27,9 +36,9 @@ const initialClientTasks: ClientTask[] = [
 ];
 
 const initialDietTasks: DietTask[] = [
-  { id: '1', mealName: 'Oatmeal Bowl', calories: 350, time: 'Breakfast', assignedTo: 'Sarah Miller' },
-  { id: '2', mealName: 'Grilled Chicken Salad', calories: 480, time: 'Lunch', assignedTo: 'John Doe' },
-  { id: '3', mealName: 'Salmon & Quinoa', calories: 550, time: 'Dinner', assignedTo: 'Emily Chen' },
+  { id: '1', mealName: 'Oatmeal Bowl', calories: 350, time: 'Breakfast', assignedTo: 'Sarah Miller', assignedTrainer: 'Trainer 1' },
+  { id: '2', mealName: 'Grilled Chicken Salad', calories: 480, time: 'Lunch', assignedTo: 'John Doe', assignedTrainer: 'Trainer 2' },
+  { id: '3', mealName: 'Salmon & Quinoa', calories: 550, time: 'Dinner', assignedTo: 'Emily Chen', assignedTrainer: 'Trainer 3' },
 ];
 
 const statusColors: Record<string, string> = {
@@ -49,6 +58,7 @@ const AdminDashboard = () => {
   const [newCalories, setNewCalories] = useState('');
   const [newTime, setNewTime] = useState<'Breakfast' | 'Lunch' | 'Dinner'>('Breakfast');
   const [newAssignee, setNewAssignee] = useState('');
+  const [newTrainer, setNewTrainer] = useState(MOCK_TRAINERS[0]?.name ?? 'Trainer 1');
 
   const updateTaskStatus = (id: string) => {
     setClientTasks(prev =>
@@ -66,18 +76,20 @@ const AdminDashboard = () => {
 
   const addDietTask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMeal.trim() || !newCalories || !newAssignee.trim()) return;
+    if (!newMeal.trim() || !newCalories || !newAssignee.trim() || !newTrainer.trim()) return;
     const task: DietTask = {
       id: Date.now().toString(),
       mealName: newMeal,
       calories: Number(newCalories),
       time: newTime,
       assignedTo: newAssignee,
+      assignedTrainer: newTrainer,
     };
     setDietTasks(prev => [...prev, task]);
     setNewMeal('');
     setNewCalories('');
     setNewAssignee('');
+    setNewTrainer(MOCK_TRAINERS[0]?.name ?? 'Trainer 1');
   };
 
   const deleteDietTask = (id: string) => {
@@ -170,7 +182,7 @@ const AdminDashboard = () => {
                 <h2 className="mb-4 font-display font-bold flex items-center gap-2">
                   <Plus className="h-4 w-4 text-primary" /> Add Diet Task
                 </h2>
-                <form onSubmit={addDietTask} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <form onSubmit={addDietTask} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
                   <input
                     value={newMeal}
                     onChange={e => setNewMeal(e.target.value)}
@@ -187,15 +199,16 @@ const AdminDashboard = () => {
                     min={1}
                     className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
                   />
-                  <select
-                    value={newTime}
-                    onChange={e => setNewTime(e.target.value as DietTask['time'])}
-                    className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-                  >
-                    <option>Breakfast</option>
-                    <option>Lunch</option>
-                    <option>Dinner</option>
-                  </select>
+                  <Select value={newTime} onValueChange={value => setNewTime(value as DietTask['time'])}>
+                    <SelectTrigger className="bg-muted">
+                      <SelectValue placeholder="Select time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Breakfast">Breakfast</SelectItem>
+                      <SelectItem value="Lunch">Lunch</SelectItem>
+                      <SelectItem value="Dinner">Dinner</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <input
                     value={newAssignee}
                     onChange={e => setNewAssignee(e.target.value)}
@@ -203,6 +216,18 @@ const AdminDashboard = () => {
                     required
                     className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
                   />
+                  <Select value={newTrainer} onValueChange={setNewTrainer}>
+                    <SelectTrigger className="bg-muted">
+                      <SelectValue placeholder="Assign trainer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MOCK_TRAINERS.map(trainer => (
+                        <SelectItem key={trainer.id} value={trainer.name}>
+                          {trainer.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <button
                     type="submit"
                     className="gradient-primary rounded-lg py-2 text-sm font-bold text-primary-foreground transition-transform hover:scale-[1.02]"
@@ -226,7 +251,7 @@ const AdminDashboard = () => {
                       <div>
                         <p className="text-sm font-medium">{task.mealName}</p>
                         <p className="text-xs text-muted-foreground">
-                          {task.calories} cal · {task.time} · Assigned to {task.assignedTo}
+                          {task.calories} cal · {task.time} · Assigned to {task.assignedTo} · {task.assignedTrainer}
                         </p>
                       </div>
                       <button
