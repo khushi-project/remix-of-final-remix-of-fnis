@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Dumbbell, Menu, X, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const navItems = [
+const allNavItems = [
   { label: 'Home', path: '/' },
   { label: 'Dashboard', path: '/dashboard' },
   { label: 'Meal Planner', path: '/meals' },
@@ -16,6 +16,7 @@ const Navbar = () => {
   const { isAuthenticated, logout } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navItems = isAuthenticated ? allNavItems : [];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
