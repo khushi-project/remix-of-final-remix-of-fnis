@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Dumbbell, Menu, X, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const navItems = [
+const allNavItems = [
   { label: 'Home', path: '/' },
   { label: 'Dashboard', path: '/dashboard' },
   { label: 'Meal Planner', path: '/meals' },
