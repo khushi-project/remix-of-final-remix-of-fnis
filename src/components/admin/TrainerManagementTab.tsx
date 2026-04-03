@@ -50,7 +50,7 @@ const TrainerManagementTab = () => {
         <form onSubmit={addTrainer} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Trainer Name" required className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
           <input value={specialization} onChange={e => setSpecialization(e.target.value)} placeholder="Specialization" required className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" required className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
+          <input type="number" value={email} onChange={e => setEmail(e.target.value)} placeholder="Number" required className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
           <button type="submit" className="gradient-primary rounded-lg py-2 text-sm font-bold text-primary-foreground transition-transform hover:scale-[1.02] flex items-center justify-center gap-2">
             <Plus className="h-4 w-4" /> Add Trainer
           </button>
