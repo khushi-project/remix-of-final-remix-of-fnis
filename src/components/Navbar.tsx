@@ -15,6 +15,7 @@ const allNavItems = [
 const Navbar = () => {
   const { isAuthenticated, logout } = useAuth();
   const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const navItems = isAuthenticated ? allNavItems : [];
 
   return (
