@@ -15,7 +15,7 @@ const allNavItems = [
 const Navbar = () => {
   const { isAuthenticated, logout } = useAuth();
   const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const navItems = isAuthenticated ? allNavItems : [];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
