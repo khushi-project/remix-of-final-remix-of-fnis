@@ -14,6 +14,8 @@ const ClientDashboard = () => {
   const [editJoinWeight, setEditJoinWeight] = useState(user?.joinWeight?.toString() || '');
   const [editCurrentWeight, setEditCurrentWeight] = useState(user?.currentWeight?.toString() || '');
   const [, forceUpdate] = useState(0);
+  const [mealInput, setMealInput] = useState('');
+  const [selectedMealTime, setSelectedMealTime] = useState('Breakfast');
 
   if (!user) return null;
 
