@@ -38,8 +38,6 @@ const ClientDashboard = () => {
     forceUpdate(n => n + 1);
   };
 
-  const [mealInput, setMealInput] = useState('');
-  const [selectedMealTime, setSelectedMealTime] = useState('Breakfast');
 
   const handleLogMeal = (followedPlan: boolean) => {
     addMealLog({
