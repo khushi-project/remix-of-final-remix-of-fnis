@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { type UserRole } from '@/services/mockAuth';
 import { Dumbbell, Eye, EyeOff } from 'lucide-react';
+
+const ROLES: { value: UserRole; label: string }[] = [
+  { value: 'client', label: 'Client' },
+  { value: 'trainer', label: 'Trainer' },
+  { value: 'admin', label: 'Admin' },
+];
 
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<UserRole>('client');
   const [showPw, setShowPw] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
 
@@ -23,17 +31,14 @@ const Login = () => {
   const handleSubmit = (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
-    const result = login(email, password);
+    const result = login(email, password, role);
     if (!result.success) {
       setErrors({ general: result.error });
       return;
     }
-    // Redirect admin to admin dashboard, others to regular dashboard
-    if (email === 'admin' || email === 'admin@fnis.com') {
-      navigate('/admin-dashboard');
-    } else {
-      navigate('/dashboard');
-    }
+    if (role === 'admin') navigate('/admin-dashboard');
+    else if (role === 'trainer') navigate('/trainer-dashboard');
+    else navigate('/client-dashboard');
   };
 
   return (
@@ -54,6 +59,28 @@ const Login = () => {
               {errors.general}
             </div>
           )}
+
+          {/* Role Selector */}
+          <div>
+            <label className="mb-1 block text-sm font-medium">Login As</label>
+            <div className="flex gap-2">
+              {ROLES.map(r => (
+                <button
+                  key={r.value}
+                  type="button"
+                  onClick={() => setRole(r.value)}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                    role === r.value
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-muted text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div>
             <label className="mb-1 block text-sm font-medium">Email or Username</label>
             <input
@@ -61,7 +88,7 @@ const Login = () => {
               value={email}
               onChange={e => setEmail(e.target.value)}
               className="w-full rounded-lg border border-border bg-muted px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-primary"
-              placeholder="you@example.com or admin"
+              placeholder={role === 'admin' ? 'admin' : 'you@example.com'}
             />
             {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email}</p>}
           </div>

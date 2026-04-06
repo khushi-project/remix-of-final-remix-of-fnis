@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { type UserRole } from '@/services/mockAuth';
 import { Dumbbell, Eye, EyeOff } from 'lucide-react';
+
+const ROLES: { value: UserRole; label: string }[] = [
+  { value: 'client', label: 'Client' },
+  { value: 'trainer', label: 'Trainer' },
+];
 
 const Register = () => {
   const { register } = useAuth();
@@ -10,6 +16,7 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [role, setRole] = useState<UserRole>('client');
   const [showPw, setShowPw] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -28,14 +35,10 @@ const Register = () => {
   const handleSubmit = (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
-    register(name, email, password);
-    navigate('/dashboard');
+    register(name, email, password, role);
+    if (role === 'trainer') navigate('/trainer-dashboard');
+    else navigate('/client-dashboard');
   };
-
-  const fields = [
-    { label: 'Full Name', value: name, set: setName, key: 'name', type: 'text', placeholder: 'John Doe' },
-    { label: 'Email', value: email, set: setEmail, key: 'email', type: 'email', placeholder: 'you@example.com' },
-  ];
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
@@ -50,30 +53,49 @@ const Register = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-6 space-y-4">
-          {fields.map(f => (
-            <div key={f.key}>
-              <label className="mb-1 block text-sm font-medium">{f.label}</label>
-              <input
-                type={f.type}
-                value={f.value}
-                onChange={e => f.set(e.target.value)}
-                className="w-full rounded-lg border border-border bg-muted px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-primary"
-                placeholder={f.placeholder}
-              />
-              {errors[f.key] && <p className="mt-1 text-xs text-destructive">{errors[f.key]}</p>}
+          {/* Role Selector */}
+          <div>
+            <label className="mb-1 block text-sm font-medium">Register As</label>
+            <div className="flex gap-2">
+              {ROLES.map(r => (
+                <button
+                  key={r.value}
+                  type="button"
+                  onClick={() => setRole(r.value)}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                    role === r.value
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-muted text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
             </div>
-          ))}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Full Name</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)}
+              className="w-full rounded-lg border border-border bg-muted px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-primary"
+              placeholder="John Doe" />
+            {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name}</p>}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              className="w-full rounded-lg border border-border bg-muted px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-primary"
+              placeholder="you@example.com" />
+            {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email}</p>}
+          </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium">Password</label>
             <div className="relative">
-              <input
-                type={showPw ? 'text' : 'password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
+              <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
                 className="w-full rounded-lg border border-border bg-muted px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-primary pr-10"
-                placeholder="••••••••"
-              />
+                placeholder="••••••••" />
               <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                 {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -83,13 +105,9 @@ const Register = () => {
 
           <div>
             <label className="mb-1 block text-sm font-medium">Confirm Password</label>
-            <input
-              type="password"
-              value={confirm}
-              onChange={e => setConfirm(e.target.value)}
+            <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
               className="w-full rounded-lg border border-border bg-muted px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-primary"
-              placeholder="••••••••"
-            />
+              placeholder="••••••••" />
             {errors.confirm && <p className="mt-1 text-xs text-destructive">{errors.confirm}</p>}
           </div>
 
