@@ -4,47 +4,44 @@ import { useAuth } from '@/context/AuthContext';
 import { Dumbbell, Menu, X, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const allNavItems = [
-  { label: 'Home', path: '/' },
-  { label: 'Dashboard', path: '/dashboard' },
-  { label: 'Meal Planner', path: '/meals' },
-  { label: 'Workouts', path: '/workouts' },
-  { label: 'About', path: '/about' },
-];
-
 const Navbar = () => {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const navItems = isAuthenticated ? allNavItems : [];
+
+  const getNavItems = () => {
+    if (!isAuthenticated || !user) return [];
+    switch (user.role) {
+      case 'admin':
+        return [{ label: 'Admin Dashboard', path: '/admin-dashboard' }];
+      case 'trainer':
+        return [{ label: 'Dashboard', path: '/trainer-dashboard' }];
+      case 'client':
+        return [{ label: 'Dashboard', path: '/client-dashboard' }];
+      default:
+        return [];
+    }
+  };
+
+  const navItems = getNavItems();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
           <Dumbbell className="h-6 w-6 text-primary" />
           <span className="font-display text-xl font-bold tracking-tight">FNIS</span>
         </Link>
 
-        {/* Desktop nav */}
         <div className="hidden items-center gap-1 md:flex">
           {navItems.map(item => (
-            <Link
-              key={item.path}
-              to={item.path}
+            <Link key={item.path} to={item.path}
               className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                location.pathname === item.path
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {item.label}
-            </Link>
+                location.pathname === item.path ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
+              }`}>{item.label}</Link>
           ))}
         </div>
 
-        {/* Auth buttons */}
         <div className="hidden items-center gap-2 md:flex">
           {isAuthenticated ? (
             <button onClick={logout} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
@@ -58,33 +55,21 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Mobile toggle */}
         <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden text-foreground">
           {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
-      {/* Mobile menu */}
       <AnimatePresence>
         {mobileOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-b border-border bg-background md:hidden"
-          >
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-b border-border bg-background md:hidden">
             <div className="flex flex-col gap-1 p-4">
               {navItems.map(item => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setMobileOpen(false)}
+                <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)}
                   className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                     location.pathname === item.path ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
-                  }`}
-                >
-                  {item.label}
-                </Link>
+                  }`}>{item.label}</Link>
               ))}
               {isAuthenticated ? (
                 <button onClick={() => { logout(); setMobileOpen(false); }} className="mt-2 rounded-md px-3 py-2 text-left text-sm text-muted-foreground">Logout</button>

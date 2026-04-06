@@ -3,15 +3,18 @@ import {
   MOCK_ADMIN_ACCOUNT,
   MOCK_USER_ACCOUNT,
   type AuthUser as User,
+  type UserRole,
 } from '@/services/mockAuth';
+import { addRegisteredUser } from '@/services/mockData';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => { success: boolean; error?: string };
-  register: (name: string, email: string, password: string) => boolean;
+  login: (email: string, password: string, role: UserRole) => { success: boolean; error?: string };
+  register: (name: string, email: string, password: string, role: UserRole) => boolean;
   logout: () => void;
+  updateProfile: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -51,28 +54,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const login = (email: string, password: string): { success: boolean; error?: string } => {
+  const login = (email: string, password: string, role: UserRole): { success: boolean; error?: string } => {
     const normalizedLogin = email.trim().toLowerCase();
 
-    if (
-      normalizedLogin === MOCK_ADMIN_ACCOUNT.username ||
-      normalizedLogin === MOCK_ADMIN_ACCOUNT.user.email.toLowerCase()
-    ) {
-      if (password === MOCK_ADMIN_ACCOUNT.password) {
-        persistUser(MOCK_ADMIN_ACCOUNT.user, true);
-        return { success: true };
+    // Admin login
+    if (role === 'admin') {
+      if (
+        normalizedLogin === MOCK_ADMIN_ACCOUNT.username ||
+        normalizedLogin === MOCK_ADMIN_ACCOUNT.user.email.toLowerCase()
+      ) {
+        if (password === MOCK_ADMIN_ACCOUNT.password) {
+          persistUser(MOCK_ADMIN_ACCOUNT.user, true);
+          return { success: true };
+        }
+        return { success: false, error: 'Invalid admin credentials' };
       }
-      return { success: false, error: 'Invalid admin username or password' };
+      return { success: false, error: 'Invalid admin credentials' };
     }
 
-    const u: User = { ...MOCK_USER_ACCOUNT.user, email, role: 'user' };
+    // Trainer / Client login
+    const u: User = {
+      ...MOCK_USER_ACCOUNT.user,
+      id: `${role}-${Date.now()}`,
+      email,
+      role,
+      name: email.split('@')[0],
+    };
     persistUser(u);
     return { success: true };
   };
 
-  const register = (name: string, email: string, _password: string) => {
-    const u: User = { ...MOCK_USER_ACCOUNT.user, name, email, role: 'user' };
+  const register = (name: string, email: string, _password: string, role: UserRole) => {
+    const u: User = {
+      ...MOCK_USER_ACCOUNT.user,
+      id: `${role}-${Date.now()}`,
+      name,
+      email,
+      role,
+    };
     persistUser(u);
+    addRegisteredUser({ id: u.id, name: u.name, email: u.email, role: u.role });
     return true;
   };
 
@@ -82,8 +103,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem(STORAGE_KEYS.isAdmin);
   };
 
+  const updateProfile = (updates: Partial<User>) => {
+    if (!user) return;
+    const updated = { ...user, ...updates, email: user.email }; // email stays read-only
+    persistUser(updated, updated.role === 'admin');
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isAdmin: user?.role === 'admin', login, register, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isAdmin: user?.role === 'admin', login, register, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

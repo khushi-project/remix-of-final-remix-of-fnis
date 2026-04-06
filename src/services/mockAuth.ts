@@ -1,13 +1,20 @@
+export type UserRole = 'admin' | 'trainer' | 'client';
+
 export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   avatar?: string;
   age: number;
   weight: number;
   height: number;
   goal: string;
-  role: 'user' | 'admin';
+  role: UserRole;
+  specialization?: string;
+  joinWeight?: number;
+  currentWeight?: number;
+  assignedTrainerId?: string;
 }
 
 interface MockAccount {
@@ -42,7 +49,7 @@ export const MOCK_USER_ACCOUNT: MockAccount = {
     weight: 75,
     height: 178,
     goal: 'Build Muscle',
-    role: 'user',
+    role: 'client',
   },
 };
 
