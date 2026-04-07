@@ -574,56 +574,6 @@ const ClientDashboard = () => {
           </div>
         )}
 
-        {/* ══════════════════ PROGRESS TAB ══════════════════ */}
-        {activeTab === 'progress' && (
-          <div className="space-y-8 max-w-4xl">
-            <h2 className="font-display text-lg font-semibold">Progress & Nutrition</h2>
-
-            {/* Daily Kcal Progress */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h3 className="mb-4 font-display text-sm font-semibold">Daily Calorie Progress</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={dailyKcal}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="time" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-                  <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, color: 'hsl(var(--foreground))' }} />
-                  <Line type="monotone" dataKey="kcal" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))', r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Weekly Kcal */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h3 className="mb-4 font-display text-sm font-semibold">Weekly Calorie Intake</h3>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={weeklyKcalProgress}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="day" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-                  <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, color: 'hsl(var(--foreground))' }} />
-                  <Bar dataKey="kcal" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Intake" />
-                  <Bar dataKey="goal" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} name="Goal" />
-                  <Legend wrapperStyle={{ color: 'hsl(var(--muted-foreground))' }} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Macro Pie */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h3 className="mb-4 font-display text-sm font-semibold">Macro Breakdown</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie data={macroData} cx="50%" cy="50%" innerRadius={60} outerRadius={110} paddingAngle={4} dataKey="value" label={({ name, value }) => `${name} ${value}%`}>
-                    {macroData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, color: 'hsl(var(--foreground))' }} />
-                  <Legend wrapperStyle={{ color: 'hsl(var(--muted-foreground))' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
       </main>
       <Footer />
     </div>
