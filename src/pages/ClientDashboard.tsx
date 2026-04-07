@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import {
   User, Utensils, ClipboardCheck, CheckCircle, Edit2, Save, X,
-  Dumbbell, Plus, TrendingUp, Flame, Target, Clock, Trash2,
+  Dumbbell, Plus, TrendingUp, Flame, Target, Clock,
 } from 'lucide-react';
 import {
   getDietPlansForClient, acceptDietPlan, addMealLog, getMealLogs,
@@ -13,7 +13,7 @@ import {
 } from '@/services/mockData';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line,
+  ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -52,25 +52,6 @@ const removeWorkout = (id: string) => {
 // ─── Constants ──────────────────────────────────────────────
 const WORKOUT_CATEGORIES = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Cardio', 'Core'];
 
-const generateDailyKcal = (): { time: string; kcal: number }[] => {
-  const hours = ['6 AM', '8 AM', '10 AM', '12 PM', '2 PM', '4 PM', '6 PM', '8 PM'];
-  let cumulative = 0;
-  return hours.map(time => {
-    cumulative += Math.floor(Math.random() * 350) + 100;
-    return { time, kcal: cumulative };
-  });
-};
-
-const generateWeeklyKcal = (): { day: string; kcal: number; goal: number }[] => {
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  return days.map(day => ({ day, kcal: Math.floor(Math.random() * 800) + 1600, goal: 2200 }));
-};
-
-const macroData = [
-  { name: 'Protein', value: 35, color: 'hsl(var(--chart-1))' },
-  { name: 'Carbs', value: 45, color: 'hsl(var(--chart-2))' },
-  { name: 'Fats', value: 20, color: 'hsl(var(--chart-3))' },
-];
 
 // ─── Calorie Ring ───────────────────────────────────────────
 const CalorieRing = ({ consumed, goal }: { consumed: number; goal: number }) => {
@@ -103,8 +84,9 @@ const CalorieRing = ({ consumed, goal }: { consumed: number; goal: number }) => 
 
 const ClientDashboard = () => {
   const { user, updateProfile } = useAuth();
-  const { meals, exercises, addExercise, deleteExercise, dailyGoal, addMeal, updateMeal, deleteMeal } = useNutrition();
-  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'diet' | 'meals' | 'workouts' | 'progress'>('overview');
+  const { meals, exercises, addExercise, dailyGoal, addMeal } = useNutrition();
+  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'diet' | 'meals' | 'workouts'>('overview');
+  const [checkedMeals, setCheckedMeals] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(user?.name || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
@@ -122,7 +104,6 @@ const ClientDashboard = () => {
   // Meal form
   const [showMealForm, setShowMealForm] = useState(false);
   const [mealForm, setMealForm] = useState({ name: '', calories: '', protein: '', carbs: '', fats: '', type: 'breakfast' as 'breakfast' | 'lunch' | 'dinner' | 'snack' });
-  const [editMealId, setEditMealId] = useState<string | null>(null);
   const [mealErrors, setMealErrors] = useState<Record<string, string>>({});
 
   if (!user) return null;
@@ -205,20 +186,10 @@ const ClientDashboard = () => {
     setMealErrors(e);
     if (Object.keys(e).length) return;
     const data = { name: mealForm.name, calories: +mealForm.calories, protein: +mealForm.protein, carbs: +mealForm.carbs, fats: +mealForm.fats, type: mealForm.type };
-    if (editMealId) { updateMeal(editMealId, data); setEditMealId(null); }
-    else addMeal(data);
+    addMeal(data);
     setMealForm({ name: '', calories: '', protein: '', carbs: '', fats: '', type: 'breakfast' });
     setShowMealForm(false);
   };
-
-  const startEditMeal = (m: typeof meals[0]) => {
-    setMealForm({ name: m.name, calories: String(m.calories), protein: String(m.protein), carbs: String(m.carbs), fats: String(m.fats), type: m.type });
-    setEditMealId(m.id);
-    setShowMealForm(true);
-  };
-
-  const dailyKcal = generateDailyKcal();
-  const weeklyKcalProgress = generateWeeklyKcal();
 
   const tabs = [
     { key: 'overview' as const, label: 'Overview', icon: Flame },
@@ -226,7 +197,6 @@ const ClientDashboard = () => {
     { key: 'diet' as const, label: 'Diet Plans', icon: Utensils },
     { key: 'meals' as const, label: 'Meal Planner', icon: ClipboardCheck },
     { key: 'workouts' as const, label: 'Workouts', icon: Dumbbell },
-    { key: 'progress' as const, label: 'Progress', icon: TrendingUp },
   ];
 
   return (
@@ -423,7 +393,7 @@ const ClientDashboard = () => {
                 <h2 className="font-display text-2xl font-bold">Meal Planner</h2>
                 <p className="text-sm text-muted-foreground">Plan and track your daily meals</p>
               </div>
-              <button onClick={() => { setShowMealForm(!showMealForm); setEditMealId(null); setMealForm({ name: '', calories: '', protein: '', carbs: '', fats: '', type: 'breakfast' }); }} className="gradient-primary inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-primary-foreground transition-transform hover:scale-105">
+              <button onClick={() => { setShowMealForm(!showMealForm); setMealForm({ name: '', calories: '', protein: '', carbs: '', fats: '', type: 'breakfast' }); }} className="gradient-primary inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-primary-foreground transition-transform hover:scale-105">
                 <Plus className="h-4 w-4" /> Add Meal
               </button>
             </div>
@@ -432,7 +402,7 @@ const ClientDashboard = () => {
               {showMealForm && (
                 <motion.form initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} onSubmit={handleMealSubmit} className="overflow-hidden rounded-xl border border-border bg-card p-6">
                   <div className="mb-4 flex items-center justify-between">
-                    <h3 className="font-display font-semibold">{editMealId ? 'Edit Meal' : 'New Meal'}</h3>
+                    <h3 className="font-display font-semibold">New Meal</h3>
                     <button type="button" onClick={() => setShowMealForm(false)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -456,7 +426,7 @@ const ClientDashboard = () => {
                       </select>
                     </div>
                   </div>
-                  <button type="submit" className="gradient-primary mt-4 rounded-lg px-6 py-2 text-sm font-bold text-primary-foreground">{editMealId ? 'Update' : 'Add'} Meal</button>
+                  <button type="submit" className="gradient-primary mt-4 rounded-lg px-6 py-2 text-sm font-bold text-primary-foreground">Add Meal</button>
                 </motion.form>
               )}
             </AnimatePresence>
@@ -469,23 +439,32 @@ const ClientDashboard = () => {
                 <div key={type}>
                   <h2 className="mb-3 font-display text-lg font-semibold">{mealTypeLabels[type]}</h2>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {filtered.map(m => (
-                      <div key={m.id} className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30">
-                        <div className="flex items-start justify-between">
-                          <h4 className="font-display font-semibold">{m.name}</h4>
-                          <div className="flex gap-1">
-                            <button onClick={() => startEditMeal(m)} className="rounded p-1 text-muted-foreground hover:text-foreground"><Edit2 className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => deleteMeal(m.id)} className="rounded p-1 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+                    {filtered.map(m => {
+                      const isChecked = checkedMeals.has(m.id);
+                      return (
+                        <div key={m.id} className={`rounded-xl border bg-card p-4 transition-all ${isChecked ? 'border-primary/50 bg-primary/5' : 'border-border hover:border-primary/30'}`}>
+                          <div className="flex items-start justify-between">
+                            <h4 className={`font-display font-semibold ${isChecked ? 'line-through text-muted-foreground' : ''}`}>{m.name}</h4>
+                            <button
+                              onClick={() => {
+                                const next = new Set(checkedMeals);
+                                if (isChecked) next.delete(m.id); else next.add(m.id);
+                                setCheckedMeals(next);
+                              }}
+                              className={`rounded-full p-1.5 transition-colors ${isChecked ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground hover:border-primary hover:text-primary'}`}
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <p className="mt-1 font-display text-xl font-bold text-primary">{m.calories} <span className="text-xs text-muted-foreground font-normal">kcal</span></p>
+                          <div className="mt-2 flex gap-3 text-xs text-muted-foreground">
+                            <span>P: {m.protein}g</span>
+                            <span>C: {m.carbs}g</span>
+                            <span>F: {m.fats}g</span>
                           </div>
                         </div>
-                        <p className="mt-1 font-display text-xl font-bold text-primary">{m.calories} <span className="text-xs text-muted-foreground font-normal">kcal</span></p>
-                        <div className="mt-2 flex gap-3 text-xs text-muted-foreground">
-                          <span>P: {m.protein}g</span>
-                          <span>C: {m.carbs}g</span>
-                          <span>F: {m.fats}g</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -551,12 +530,9 @@ const ClientDashboard = () => {
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {items.map(ex => (
                     <div key={ex.id} className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <Dumbbell className="h-4 w-4 text-primary" />
-                          <h4 className="font-display font-semibold">{ex.name}</h4>
-                        </div>
-                        <button onClick={() => deleteExercise(ex.id)} className="rounded p-1 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <div className="flex items-center gap-2">
+                        <Dumbbell className="h-4 w-4 text-primary" />
+                        <h4 className="font-display font-semibold">{ex.name}</h4>
                       </div>
                       <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
                         <span>{ex.sets} sets × {ex.reps} reps</span>
@@ -574,56 +550,6 @@ const ClientDashboard = () => {
           </div>
         )}
 
-        {/* ══════════════════ PROGRESS TAB ══════════════════ */}
-        {activeTab === 'progress' && (
-          <div className="space-y-8 max-w-4xl">
-            <h2 className="font-display text-lg font-semibold">Progress & Nutrition</h2>
-
-            {/* Daily Kcal Progress */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h3 className="mb-4 font-display text-sm font-semibold">Daily Calorie Progress</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={dailyKcal}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="time" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-                  <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, color: 'hsl(var(--foreground))' }} />
-                  <Line type="monotone" dataKey="kcal" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))', r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Weekly Kcal */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h3 className="mb-4 font-display text-sm font-semibold">Weekly Calorie Intake</h3>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={weeklyKcalProgress}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="day" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-                  <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, color: 'hsl(var(--foreground))' }} />
-                  <Bar dataKey="kcal" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Intake" />
-                  <Bar dataKey="goal" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} name="Goal" />
-                  <Legend wrapperStyle={{ color: 'hsl(var(--muted-foreground))' }} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Macro Pie */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h3 className="mb-4 font-display text-sm font-semibold">Macro Breakdown</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie data={macroData} cx="50%" cy="50%" innerRadius={60} outerRadius={110} paddingAngle={4} dataKey="value" label={({ name, value }) => `${name} ${value}%`}>
-                    {macroData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, color: 'hsl(var(--foreground))' }} />
-                  <Legend wrapperStyle={{ color: 'hsl(var(--muted-foreground))' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
       </main>
       <Footer />
     </div>
