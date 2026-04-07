@@ -87,6 +87,7 @@ const ClientDashboard = () => {
   const { meals, exercises, addExercise, dailyGoal, addMeal } = useNutrition();
   const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'diet' | 'meals' | 'workouts'>('overview');
   const [checkedMeals, setCheckedMeals] = useState<Set<string>>(new Set());
+  const [checkedWorkouts, setCheckedWorkouts] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(user?.name || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
