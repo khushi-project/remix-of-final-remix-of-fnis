@@ -186,20 +186,10 @@ const ClientDashboard = () => {
     setMealErrors(e);
     if (Object.keys(e).length) return;
     const data = { name: mealForm.name, calories: +mealForm.calories, protein: +mealForm.protein, carbs: +mealForm.carbs, fats: +mealForm.fats, type: mealForm.type };
-    if (editMealId) { updateMeal(editMealId, data); setEditMealId(null); }
-    else addMeal(data);
+    addMeal(data);
     setMealForm({ name: '', calories: '', protein: '', carbs: '', fats: '', type: 'breakfast' });
     setShowMealForm(false);
   };
-
-  const startEditMeal = (m: typeof meals[0]) => {
-    setMealForm({ name: m.name, calories: String(m.calories), protein: String(m.protein), carbs: String(m.carbs), fats: String(m.fats), type: m.type });
-    setEditMealId(m.id);
-    setShowMealForm(true);
-  };
-
-  const dailyKcal = generateDailyKcal();
-  const weeklyKcalProgress = generateWeeklyKcal();
 
   const tabs = [
     { key: 'overview' as const, label: 'Overview', icon: Flame },
