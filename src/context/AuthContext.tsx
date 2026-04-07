@@ -5,7 +5,7 @@ import {
   type AuthUser as User,
   type UserRole,
 } from '@/services/mockAuth';
-import { addRegisteredUser } from '@/services/mockData';
+import { addRegisteredUser, getTrainers, getClients, addTrainer, addClient } from '@/services/mockData';
 
 interface AuthContextType {
   user: User | null;
