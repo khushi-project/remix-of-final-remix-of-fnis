@@ -5,7 +5,7 @@ import {
   type AuthUser as User,
   type UserRole,
 } from '@/services/mockAuth';
-import { addRegisteredUser } from '@/services/mockData';
+import { addRegisteredUser, getTrainers, getClients, addTrainer, addClient } from '@/services/mockData';
 
 interface AuthContextType {
   user: User | null;
@@ -94,6 +94,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     persistUser(u);
     addRegisteredUser({ id: u.id, name: u.name, email: u.email, role: u.role });
+    // Also add to the persistent trainer/client stores
+    if (role === 'trainer') {
+      const trainers = getTrainers();
+      if (!trainers.find(t => t.email === email)) {
+        addTrainer({ name, email, phone: '', specialization: '' });
+      }
+    } else if (role === 'client') {
+      const clients = getClients();
+      if (!clients.find(c => c.email === email)) {
+        addClient({ name, email, phone: '', goal: '' });
+      }
+    }
     return true;
   };
 

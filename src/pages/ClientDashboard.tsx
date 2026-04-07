@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { User, Utensils, ClipboardCheck, CheckCircle, Edit2, Save, X } from 'lucide-react';
-import { getDietPlansForClient, acceptDietPlan, addMealLog, getMealLogs, getClientTrainer, type DietPlan, type MealLog } from '@/services/mockData';
+import { getDietPlansForClient, acceptDietPlan, addMealLog, getMealLogs, getClientTrainer, getTrainerById, updateClient, type DietPlan, type MealLog } from '@/services/mockData';
 
 const ClientDashboard = () => {
   const { user, updateProfile } = useAuth();
@@ -21,15 +21,19 @@ const ClientDashboard = () => {
 
   const dietPlans = getDietPlansForClient(user.id);
   const mealLogs = getMealLogs(user.id);
-  const trainerInfo = getClientTrainer(user.id);
+  const trainerRel = getClientTrainer(user.id);
+  const trainer = trainerRel ? getTrainerById(trainerRel.trainerId) : undefined;
 
   const handleSaveProfile = () => {
-    updateProfile({
+    const updates = {
       name: editName,
       phone: editPhone,
       joinWeight: editJoinWeight ? Number(editJoinWeight) : undefined,
       currentWeight: editCurrentWeight ? Number(editCurrentWeight) : undefined,
-    });
+    };
+    updateProfile(updates);
+    // Also update client store
+    updateClient(user.id, updates);
     setEditing(false);
   };
 
@@ -37,7 +41,6 @@ const ClientDashboard = () => {
     acceptDietPlan(planId);
     forceUpdate(n => n + 1);
   };
-
 
   const handleLogMeal = (followedPlan: boolean) => {
     addMealLog({
@@ -63,7 +66,6 @@ const ClientDashboard = () => {
       <main className="container mx-auto px-4 pt-24 pb-12">
         <h1 className="font-display text-2xl font-bold mb-6">Client Dashboard</h1>
 
-        {/* Tab nav */}
         <div className="flex gap-2 mb-8 overflow-x-auto">
           {tabs.map(t => (
             <button key={t.key} onClick={() => setActiveTab(t.key)}
@@ -128,9 +130,20 @@ const ClientDashboard = () => {
                   )}
                 </div>
               </div>
-              <div>
+
+              {/* Assigned Trainer Section */}
+              <div className="mt-4 rounded-lg border border-border bg-muted/50 p-4">
                 <label className="text-xs text-muted-foreground">Assigned Trainer</label>
-                <p className="text-sm font-medium">{trainerInfo?.clientName ? 'Assigned' : 'No trainer assigned'}</p>
+                {trainer ? (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm font-medium">{trainer.name}</p>
+                    <p className="text-xs text-muted-foreground">Email: {trainer.email}</p>
+                    <p className="text-xs text-muted-foreground">Phone: {trainer.phone || 'Not set'}</p>
+                    <p className="text-xs text-muted-foreground">Specialization: {trainer.specialization || 'Not set'}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium mt-1">No trainer assigned</p>
+                )}
               </div>
             </div>
           </div>
@@ -176,7 +189,6 @@ const ClientDashboard = () => {
         {activeTab === 'meals' && (
           <div className="max-w-2xl space-y-6">
             <h2 className="font-display text-lg font-semibold">Meal Tracking</h2>
-
             <div className="rounded-xl border border-border bg-card p-5 space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium">Meal Time</label>
@@ -200,7 +212,6 @@ const ClientDashboard = () => {
                 className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
             </div>
 
-            {/* Logs */}
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-muted-foreground">Recent Logs</h3>
               {getMealLogs(user.id).length === 0 ? (
