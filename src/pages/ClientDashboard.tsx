@@ -560,12 +560,9 @@ const ClientDashboard = () => {
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {items.map(ex => (
                     <div key={ex.id} className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <Dumbbell className="h-4 w-4 text-primary" />
-                          <h4 className="font-display font-semibold">{ex.name}</h4>
-                        </div>
-                        <button onClick={() => deleteExercise(ex.id)} className="rounded p-1 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <div className="flex items-center gap-2">
+                        <Dumbbell className="h-4 w-4 text-primary" />
+                        <h4 className="font-display font-semibold">{ex.name}</h4>
                       </div>
                       <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
                         <span>{ex.sets} sets × {ex.reps} reps</span>
