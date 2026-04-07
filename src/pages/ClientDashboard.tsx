@@ -393,7 +393,7 @@ const ClientDashboard = () => {
                 <h2 className="font-display text-2xl font-bold">Meal Planner</h2>
                 <p className="text-sm text-muted-foreground">Plan and track your daily meals</p>
               </div>
-              <button onClick={() => { setShowMealForm(!showMealForm); setEditMealId(null); setMealForm({ name: '', calories: '', protein: '', carbs: '', fats: '', type: 'breakfast' }); }} className="gradient-primary inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-primary-foreground transition-transform hover:scale-105">
+              <button onClick={() => { setShowMealForm(!showMealForm); setMealForm({ name: '', calories: '', protein: '', carbs: '', fats: '', type: 'breakfast' }); }} className="gradient-primary inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-primary-foreground transition-transform hover:scale-105">
                 <Plus className="h-4 w-4" /> Add Meal
               </button>
             </div>
