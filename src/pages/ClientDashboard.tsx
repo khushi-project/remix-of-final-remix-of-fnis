@@ -227,7 +227,6 @@ const ClientDashboard = () => {
     { key: 'diet' as const, label: 'Diet Plans', icon: Utensils },
     { key: 'meals' as const, label: 'Meal Planner', icon: ClipboardCheck },
     { key: 'workouts' as const, label: 'Workouts', icon: Dumbbell },
-    { key: 'progress' as const, label: 'Progress', icon: TrendingUp },
   ];
 
   return (
