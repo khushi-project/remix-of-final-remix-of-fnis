@@ -7,23 +7,36 @@ import ClientTasksTab from '@/components/admin/ClientTasksTab';
 import DietTasksTab from '@/components/admin/DietTasksTab';
 import TrainerManagementTab from '@/components/admin/TrainerManagementTab';
 import ClientManagementTab from '@/components/admin/ClientManagementTab';
+import { getTrainers, getClients, getDietPlans, getAllTrainerClients } from '@/services/mockData';
 
 export type AdminTab = 'clients' | 'diet' | 'trainers' | 'manage-clients';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('clients');
+  const [, forceUpdate] = useState(0);
+
+  const trainers = getTrainers();
+  const clients = getClients();
+  const dietPlans = getDietPlans();
+  const trainerClientMappings = getAllTrainerClients();
 
   const stats = [
-    { label: 'Total Clients', value: '4', icon: Users },
-    { label: 'Active Tasks', value: '3', icon: Clock },
-    { label: 'Diet Plans', value: '3', icon: Utensils },
-    { label: 'Trainers', value: '4', icon: Dumbbell },
+    { label: 'Total Clients', value: String(clients.length), icon: Users },
+    { label: 'Total Trainers', value: String(trainers.length), icon: Dumbbell },
+    { label: 'Diet Plans', value: String(dietPlans.length), icon: Utensils },
+    { label: 'Assignments', value: String(trainerClientMappings.length), icon: Clock },
   ];
+
+  // Force re-render when switching tabs to pick up localStorage changes
+  const handleTabChange = (tab: AdminTab) => {
+    setActiveTab(tab);
+    forceUpdate(n => n + 1);
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <AdminSidebar activeTab={activeTab} onTabChange={handleTabChange} />
       <main className="pl-16 transition-all duration-300 md:pl-60">
         <div className="mx-auto max-w-5xl px-6 py-8">
           <div className="mb-8">

@@ -3,7 +3,12 @@ import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { User, Users, Utensils, Edit2, Save, X, Plus, Trash2 } from 'lucide-react';
-import { getTrainerClients, addTrainerClient, removeTrainerClient, getDietPlansForTrainer, addDietPlan, updateDietPlan, type DietPlan } from '@/services/mockData';
+import {
+  getTrainerClients, addTrainerClient, removeTrainerClient,
+  getDietPlansForTrainer, addDietPlan, updateDietPlan,
+  getClients, updateTrainer, getTrainerById,
+  type DietPlan
+} from '@/services/mockData';
 
 const TrainerDashboard = () => {
   const { user, updateProfile } = useAuth();
@@ -15,8 +20,7 @@ const TrainerDashboard = () => {
   const [, forceUpdate] = useState(0);
 
   // Add client form
-  const [newClientName, setNewClientName] = useState('');
-  const [newClientEmail, setNewClientEmail] = useState('');
+  const [selectedClientId, setSelectedClientId] = useState('');
 
   // Diet plan form
   const [dpTitle, setDpTitle] = useState('');
@@ -29,23 +33,30 @@ const TrainerDashboard = () => {
 
   const clients = getTrainerClients(user.id);
   const dietPlans = getDietPlansForTrainer(user.id);
+  const allClients = getClients();
+
+  // Clients not yet assigned to this trainer
+  const assignableClients = allClients.filter(c => !clients.find(tc => tc.clientId === c.id));
 
   const handleSaveProfile = () => {
     updateProfile({ name: editName, phone: editPhone, specialization: editSpec });
+    // Also update trainer store
+    updateTrainer(user.id, { name: editName, phone: editPhone, specialization: editSpec });
     setEditing(false);
   };
 
   const handleAddClient = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newClientName.trim() || !newClientEmail.trim()) return;
+    if (!selectedClientId) return;
+    const client = allClients.find(c => c.id === selectedClientId);
+    if (!client) return;
     addTrainerClient({
       trainerId: user.id,
-      clientId: `client-${Date.now()}`,
-      clientName: newClientName,
-      clientEmail: newClientEmail,
+      clientId: client.id,
+      clientName: client.name,
+      clientEmail: client.email,
     });
-    setNewClientName('');
-    setNewClientEmail('');
+    setSelectedClientId('');
     forceUpdate(n => n + 1);
   };
 
@@ -58,8 +69,7 @@ const TrainerDashboard = () => {
     e.preventDefault();
     if (!dpTitle.trim() || !dpClientId) return;
     addDietPlan({ trainerId: user.id, clientId: dpClientId, title: dpTitle, meals: dpMeals.filter(m => m.description) });
-    setDpTitle('');
-    setDpClientId('');
+    setDpTitle(''); setDpClientId('');
     setDpMeals([{ time: 'Breakfast', description: '' }]);
     forceUpdate(n => n + 1);
   };
@@ -77,8 +87,8 @@ const TrainerDashboard = () => {
 
   const tabs = [
     { key: 'profile' as const, label: 'Profile', icon: User },
-    { key: 'clients' as const, label: 'Clients', icon: Users },
-    { key: 'diet' as const, label: 'Diet Plans', icon: Utensils },
+    { key: 'clients' as const, label: `Clients (${clients.length})`, icon: Users },
+    { key: 'diet' as const, label: `Diet Plans (${dietPlans.length})`, icon: Utensils },
   ];
 
   return (
@@ -145,20 +155,24 @@ const TrainerDashboard = () => {
         {activeTab === 'clients' && (
           <div className="max-w-2xl space-y-6">
             <form onSubmit={handleAddClient} className="rounded-xl border border-border bg-card p-5 space-y-3">
-              <h3 className="font-display font-semibold">Add New Client</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <input value={newClientName} onChange={e => setNewClientName(e.target.value)} placeholder="Client Name" className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
-                <input value={newClientEmail} onChange={e => setNewClientEmail(e.target.value)} placeholder="Client Email" className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
+              <h3 className="font-display font-semibold">Assign Client</h3>
+              <div className="flex gap-3">
+                <select value={selectedClientId} onChange={e => setSelectedClientId(e.target.value)}
+                  className="flex-1 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
+                  <option value="">Select a client to assign</option>
+                  {assignableClients.map(c => <option key={c.id} value={c.id}>{c.name} ({c.email})</option>)}
+                </select>
+                <button type="submit" className="flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-colors">
+                  <Plus className="h-4 w-4" /> Assign
+                </button>
               </div>
-              <button type="submit" className="flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-colors">
-                <Plus className="h-4 w-4" /> Add Client
-              </button>
+              {assignableClients.length === 0 && <p className="text-xs text-muted-foreground">No unassigned clients available.</p>}
             </form>
 
             <div className="space-y-2">
-              <h3 className="text-sm font-medium text-muted-foreground">Client List ({clients.length})</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">My Clients ({clients.length})</h3>
               {clients.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No clients added yet.</p>
+                <p className="text-sm text-muted-foreground">No clients assigned yet.</p>
               ) : (
                 clients.map(c => (
                   <div key={c.clientId} className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
@@ -203,42 +217,48 @@ const TrainerDashboard = () => {
 
             <div className="space-y-3">
               <h3 className="text-sm font-medium text-muted-foreground">Existing Plans ({dietPlans.length})</h3>
-              {dietPlans.map(plan => (
-                <div key={plan.id} className="rounded-xl border border-border bg-card p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-display font-semibold">{plan.title}</h4>
-                    <div className="flex items-center gap-2">
-                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${plan.status === 'accepted' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>{plan.status}</span>
-                      {editingPlan !== plan.id && (
-                        <button onClick={() => handleStartEditPlan(plan)} className="text-sm text-primary hover:underline"><Edit2 className="h-3 w-3" /></button>
-                      )}
-                    </div>
-                  </div>
-                  {editingPlan === plan.id ? (
-                    <div className="space-y-2">
-                      {editPlanMeals.map((meal, i) => (
-                        <div key={i} className="grid grid-cols-[120px_1fr] gap-2">
-                          <input value={meal.time} onChange={e => { const m = [...editPlanMeals]; m[i].time = e.target.value; setEditPlanMeals(m); }} className="rounded-lg border border-border bg-muted px-2 py-2 text-sm text-foreground outline-none" />
-                          <input value={meal.description} onChange={e => { const m = [...editPlanMeals]; m[i].description = e.target.value; setEditPlanMeals(m); }} className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none" />
-                        </div>
-                      ))}
-                      <div className="flex gap-2">
-                        <button onClick={() => handleSavePlanEdit(plan.id)} className="text-sm text-primary hover:underline">Save</button>
-                        <button onClick={() => setEditingPlan(null)} className="text-sm text-muted-foreground hover:underline">Cancel</button>
+              {dietPlans.map(plan => {
+                const clientName = clients.find(c => c.clientId === plan.clientId)?.clientName || 'Unknown';
+                return (
+                  <div key={plan.id} className="rounded-xl border border-border bg-card p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h4 className="font-display font-semibold">{plan.title}</h4>
+                        <p className="text-xs text-muted-foreground">For: {clientName}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`rounded-full px-3 py-1 text-xs font-medium ${plan.status === 'accepted' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>{plan.status}</span>
+                        {editingPlan !== plan.id && (
+                          <button onClick={() => handleStartEditPlan(plan)} className="text-sm text-primary hover:underline"><Edit2 className="h-3 w-3" /></button>
+                        )}
                       </div>
                     </div>
-                  ) : (
-                    <div className="space-y-1">
-                      {plan.meals.map((meal, i) => (
-                        <div key={i} className="flex gap-3 text-sm">
-                          <span className="text-muted-foreground min-w-[100px]">{meal.time}</span>
-                          <span>{meal.description}</span>
+                    {editingPlan === plan.id ? (
+                      <div className="space-y-2">
+                        {editPlanMeals.map((meal, i) => (
+                          <div key={i} className="grid grid-cols-[120px_1fr] gap-2">
+                            <input value={meal.time} onChange={e => { const m = [...editPlanMeals]; m[i].time = e.target.value; setEditPlanMeals(m); }} className="rounded-lg border border-border bg-muted px-2 py-2 text-sm text-foreground outline-none" />
+                            <input value={meal.description} onChange={e => { const m = [...editPlanMeals]; m[i].description = e.target.value; setEditPlanMeals(m); }} className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none" />
+                          </div>
+                        ))}
+                        <div className="flex gap-2">
+                          <button onClick={() => handleSavePlanEdit(plan.id)} className="text-sm text-primary hover:underline">Save</button>
+                          <button onClick={() => setEditingPlan(null)} className="text-sm text-muted-foreground hover:underline">Cancel</button>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {plan.meals.map((meal, i) => (
+                          <div key={i} className="flex gap-3 text-sm">
+                            <span className="text-muted-foreground min-w-[100px]">{meal.time}</span>
+                            <span>{meal.description}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
