@@ -19,7 +19,7 @@ const Home = () => (
     <Navbar />
 
     {/* Hero */}
-    <section className="relative flex min-h-screen items-center pt-16" style={{ background: `linear-gradient(to bottom, hsl(220 20% 6% / 0.7), hsl(220 20% 4% / 0.85)), url('/images/gym-bg.png') center/cover no-repeat` }}>
+    <section className="relative flex min-h-screen items-center pt-16" style={{ background: `linear-gradient(to bottom, hsl(220 20% 6% / 0.7), hsl(220 20% 4% / 0.85)), url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=2040&auto=format&fit=crop') center/cover no-repeat` }}>
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-3xl text-center">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
