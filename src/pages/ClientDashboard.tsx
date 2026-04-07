@@ -469,23 +469,32 @@ const ClientDashboard = () => {
                 <div key={type}>
                   <h2 className="mb-3 font-display text-lg font-semibold">{mealTypeLabels[type]}</h2>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {filtered.map(m => (
-                      <div key={m.id} className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30">
-                        <div className="flex items-start justify-between">
-                          <h4 className="font-display font-semibold">{m.name}</h4>
-                          <div className="flex gap-1">
-                            <button onClick={() => startEditMeal(m)} className="rounded p-1 text-muted-foreground hover:text-foreground"><Edit2 className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => deleteMeal(m.id)} className="rounded p-1 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+                    {filtered.map(m => {
+                      const isChecked = checkedMeals.has(m.id);
+                      return (
+                        <div key={m.id} className={`rounded-xl border bg-card p-4 transition-all ${isChecked ? 'border-primary/50 bg-primary/5' : 'border-border hover:border-primary/30'}`}>
+                          <div className="flex items-start justify-between">
+                            <h4 className={`font-display font-semibold ${isChecked ? 'line-through text-muted-foreground' : ''}`}>{m.name}</h4>
+                            <button
+                              onClick={() => {
+                                const next = new Set(checkedMeals);
+                                if (isChecked) next.delete(m.id); else next.add(m.id);
+                                setCheckedMeals(next);
+                              }}
+                              className={`rounded-full p-1.5 transition-colors ${isChecked ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground hover:border-primary hover:text-primary'}`}
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <p className="mt-1 font-display text-xl font-bold text-primary">{m.calories} <span className="text-xs text-muted-foreground font-normal">kcal</span></p>
+                          <div className="mt-2 flex gap-3 text-xs text-muted-foreground">
+                            <span>P: {m.protein}g</span>
+                            <span>C: {m.carbs}g</span>
+                            <span>F: {m.fats}g</span>
                           </div>
                         </div>
-                        <p className="mt-1 font-display text-xl font-bold text-primary">{m.calories} <span className="text-xs text-muted-foreground font-normal">kcal</span></p>
-                        <div className="mt-2 flex gap-3 text-xs text-muted-foreground">
-                          <span>P: {m.protein}g</span>
-                          <span>C: {m.carbs}g</span>
-                          <span>F: {m.fats}g</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
