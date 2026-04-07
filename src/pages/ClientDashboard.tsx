@@ -52,25 +52,6 @@ const removeWorkout = (id: string) => {
 // ─── Constants ──────────────────────────────────────────────
 const WORKOUT_CATEGORIES = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Cardio', 'Core'];
 
-const generateDailyKcal = (): { time: string; kcal: number }[] => {
-  const hours = ['6 AM', '8 AM', '10 AM', '12 PM', '2 PM', '4 PM', '6 PM', '8 PM'];
-  let cumulative = 0;
-  return hours.map(time => {
-    cumulative += Math.floor(Math.random() * 350) + 100;
-    return { time, kcal: cumulative };
-  });
-};
-
-const generateWeeklyKcal = (): { day: string; kcal: number; goal: number }[] => {
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  return days.map(day => ({ day, kcal: Math.floor(Math.random() * 800) + 1600, goal: 2200 }));
-};
-
-const macroData = [
-  { name: 'Protein', value: 35, color: 'hsl(var(--chart-1))' },
-  { name: 'Carbs', value: 45, color: 'hsl(var(--chart-2))' },
-  { name: 'Fats', value: 20, color: 'hsl(var(--chart-3))' },
-];
 
 // ─── Calorie Ring ───────────────────────────────────────────
 const CalorieRing = ({ consumed, goal }: { consumed: number; goal: number }) => {
