@@ -2,12 +2,67 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { User, Utensils, ClipboardCheck, CheckCircle, Edit2, Save, X } from 'lucide-react';
-import { getDietPlansForClient, acceptDietPlan, addMealLog, getMealLogs, getClientTrainer, getTrainerById, updateClient, type DietPlan, type MealLog } from '@/services/mockData';
+import { User, Utensils, ClipboardCheck, CheckCircle, Edit2, Save, X, Dumbbell, Plus, TrendingUp } from 'lucide-react';
+import { getDietPlansForClient, acceptDietPlan, addMealLog, getMealLogs, getClientTrainer, getTrainerById, updateClient, type MealLog } from '@/services/mockData';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
+
+// ─── Workout types & localStorage helpers ───────────────────
+interface WorkoutEntry {
+  id: string;
+  clientId: string;
+  date: string;
+  exercise: string;
+  sets: number;
+  reps: number;
+  weight: number;
+  duration: number; // minutes
+  caloriesBurned: number;
+}
+
+const WO_KEY = 'fnis_workouts';
+const getWorkouts = (clientId: string): WorkoutEntry[] => {
+  try {
+    return (JSON.parse(localStorage.getItem(WO_KEY) || '[]') as WorkoutEntry[]).filter(w => w.clientId === clientId);
+  } catch { return []; }
+};
+const addWorkout = (entry: Omit<WorkoutEntry, 'id'>): WorkoutEntry => {
+  const all: WorkoutEntry[] = JSON.parse(localStorage.getItem(WO_KEY) || '[]');
+  const newW: WorkoutEntry = { ...entry, id: `wo-${Date.now()}` };
+  all.push(newW);
+  localStorage.setItem(WO_KEY, JSON.stringify(all));
+  return newW;
+};
+
+// ─── Nutrition mock data helpers ────────────────────────────
+const generateDailyKcal = (): { time: string; kcal: number }[] => {
+  const hours = ['6 AM', '8 AM', '10 AM', '12 PM', '2 PM', '4 PM', '6 PM', '8 PM'];
+  let cumulative = 0;
+  return hours.map(time => {
+    cumulative += Math.floor(Math.random() * 350) + 100;
+    return { time, kcal: cumulative };
+  });
+};
+
+const generateWeeklyKcal = (): { day: string; kcal: number; goal: number }[] => {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  return days.map(day => ({ day, kcal: Math.floor(Math.random() * 800) + 1600, goal: 2200 }));
+};
+
+const macroData = [
+  { name: 'Protein', value: 35, color: 'hsl(84, 81%, 44%)' },
+  { name: 'Carbs', value: 45, color: 'hsl(199, 89%, 48%)' },
+  { name: 'Fats', value: 20, color: 'hsl(45, 93%, 47%)' },
+];
+
+const EXERCISE_OPTIONS = [
+  'Push-ups', 'Pull-ups', 'Squats', 'Deadlifts', 'Bench Press',
+  'Shoulder Press', 'Lunges', 'Plank', 'Burpees', 'Cycling',
+  'Running', 'Jump Rope', 'Lat Pulldown', 'Bicep Curls', 'Tricep Dips',
+];
 
 const ClientDashboard = () => {
   const { user, updateProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'diet' | 'meals'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'diet' | 'meals' | 'workouts' | 'progress'>('profile');
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(user?.name || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
@@ -17,12 +72,21 @@ const ClientDashboard = () => {
   const [mealInput, setMealInput] = useState('');
   const [selectedMealTime, setSelectedMealTime] = useState('Breakfast');
 
+  // Workout form state
+  const [woExercise, setWoExercise] = useState(EXERCISE_OPTIONS[0]);
+  const [woSets, setWoSets] = useState('3');
+  const [woReps, setWoReps] = useState('12');
+  const [woWeight, setWoWeight] = useState('');
+  const [woDuration, setWoDuration] = useState('');
+  const [woCalories, setWoCalories] = useState('');
+
   if (!user) return null;
 
   const dietPlans = getDietPlansForClient(user.id);
   const mealLogs = getMealLogs(user.id);
   const trainerRel = getClientTrainer(user.id);
   const trainer = trainerRel ? getTrainerById(trainerRel.trainerId) : undefined;
+  const workouts = getWorkouts(user.id);
 
   const handleSaveProfile = () => {
     const updates = {
@@ -32,7 +96,6 @@ const ClientDashboard = () => {
       currentWeight: editCurrentWeight ? Number(editCurrentWeight) : undefined,
     };
     updateProfile(updates);
-    // Also update client store
     updateClient(user.id, updates);
     setEditing(false);
   };
@@ -54,11 +117,32 @@ const ClientDashboard = () => {
     forceUpdate(n => n + 1);
   };
 
+  const handleAddWorkout = (e: React.FormEvent) => {
+    e.preventDefault();
+    addWorkout({
+      clientId: user.id,
+      date: new Date().toISOString().split('T')[0],
+      exercise: woExercise,
+      sets: Number(woSets),
+      reps: Number(woReps),
+      weight: Number(woWeight) || 0,
+      duration: Number(woDuration) || 0,
+      caloriesBurned: Number(woCalories) || 0,
+    });
+    setWoSets('3'); setWoReps('12'); setWoWeight(''); setWoDuration(''); setWoCalories('');
+    forceUpdate(n => n + 1);
+  };
+
   const tabs = [
     { key: 'profile' as const, label: 'Profile', icon: User },
     { key: 'diet' as const, label: 'Diet Plans', icon: Utensils },
     { key: 'meals' as const, label: 'Meal Tracking', icon: ClipboardCheck },
+    { key: 'workouts' as const, label: 'Workouts', icon: Dumbbell },
+    { key: 'progress' as const, label: 'Progress', icon: TrendingUp },
   ];
+
+  const dailyKcal = generateDailyKcal();
+  const weeklyKcal = generateWeeklyKcal();
 
   return (
     <div className="min-h-screen bg-background">
@@ -130,8 +214,6 @@ const ClientDashboard = () => {
                   )}
                 </div>
               </div>
-
-              {/* Assigned Trainer Section */}
               <div className="mt-4 rounded-lg border border-border bg-muted/50 p-4">
                 <label className="text-xs text-muted-foreground">Assigned Trainer</label>
                 {trainer ? (
@@ -211,7 +293,6 @@ const ClientDashboard = () => {
                 placeholder="What did you eat instead?"
                 className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
             </div>
-
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-muted-foreground">Recent Logs</h3>
               {getMealLogs(user.id).length === 0 ? (
@@ -229,6 +310,143 @@ const ClientDashboard = () => {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Workouts Tab */}
+        {activeTab === 'workouts' && (
+          <div className="max-w-3xl space-y-6">
+            <h2 className="font-display text-lg font-semibold">Workout Tracker</h2>
+
+            {/* Add Workout Form */}
+            <form onSubmit={handleAddWorkout} className="rounded-xl border border-border bg-card p-5 space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2"><Plus className="h-4 w-4 text-primary" /> Log Workout</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="col-span-2 md:col-span-1">
+                  <label className="mb-1 block text-xs text-muted-foreground">Exercise</label>
+                  <select value={woExercise} onChange={e => setWoExercise(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
+                    {EXERCISE_OPTIONS.map(ex => <option key={ex} value={ex}>{ex}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Sets</label>
+                  <input type="number" value={woSets} onChange={e => setWoSets(e.target.value)} min="1"
+                    className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Reps</label>
+                  <input type="number" value={woReps} onChange={e => setWoReps(e.target.value)} min="1"
+                    className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Weight (kg)</label>
+                  <input type="number" value={woWeight} onChange={e => setWoWeight(e.target.value)} placeholder="0"
+                    className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Duration (min)</label>
+                  <input type="number" value={woDuration} onChange={e => setWoDuration(e.target.value)} placeholder="0"
+                    className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Calories Burned</label>
+                  <input type="number" value={woCalories} onChange={e => setWoCalories(e.target.value)} placeholder="0"
+                    className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
+                </div>
+              </div>
+              <button type="submit" className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+                Add Workout
+              </button>
+            </form>
+
+            {/* Workout History */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-muted-foreground">Recent Workouts</h3>
+              {workouts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No workouts logged yet.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Exercise</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">Sets × Reps</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">Weight</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">Duration</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">Kcal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {workouts.slice().reverse().slice(0, 15).map(w => (
+                        <tr key={w.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 text-muted-foreground">{w.date}</td>
+                          <td className="px-4 py-3 font-medium">{w.exercise}</td>
+                          <td className="px-4 py-3 text-center">{w.sets} × {w.reps}</td>
+                          <td className="px-4 py-3 text-center">{w.weight ? `${w.weight} kg` : '—'}</td>
+                          <td className="px-4 py-3 text-center">{w.duration ? `${w.duration} min` : '—'}</td>
+                          <td className="px-4 py-3 text-center text-primary font-medium">{w.caloriesBurned || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Progress Tab */}
+        {activeTab === 'progress' && (
+          <div className="space-y-8 max-w-4xl">
+            <h2 className="font-display text-lg font-semibold">Progress & Nutrition</h2>
+
+            {/* Daily Kcal Progress (Line Chart) */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h3 className="text-sm font-semibold mb-4">Daily Calorie Progress</h3>
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={dailyKcal}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" />
+                  <XAxis dataKey="time" tick={{ fill: 'hsl(220, 10%, 55%)', fontSize: 12 }} />
+                  <YAxis tick={{ fill: 'hsl(220, 10%, 55%)', fontSize: 12 }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'hsl(220, 18%, 10%)', border: '1px solid hsl(220, 14%, 18%)', borderRadius: '8px', color: 'hsl(0, 0%, 95%)' }} />
+                  <Line type="monotone" dataKey="kcal" stroke="hsl(84, 81%, 44%)" strokeWidth={2} dot={{ fill: 'hsl(84, 81%, 44%)', r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Weekly Kcal Bar Chart */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h3 className="text-sm font-semibold mb-4">Weekly Calorie Intake</h3>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={weeklyKcal}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" />
+                  <XAxis dataKey="day" tick={{ fill: 'hsl(220, 10%, 55%)', fontSize: 12 }} />
+                  <YAxis tick={{ fill: 'hsl(220, 10%, 55%)', fontSize: 12 }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'hsl(220, 18%, 10%)', border: '1px solid hsl(220, 14%, 18%)', borderRadius: '8px', color: 'hsl(0, 0%, 95%)' }} />
+                  <Bar dataKey="kcal" fill="hsl(84, 81%, 44%)" radius={[4, 4, 0, 0]} name="Intake" />
+                  <Bar dataKey="goal" fill="hsl(220, 14%, 25%)" radius={[4, 4, 0, 0]} name="Goal" />
+                  <Legend wrapperStyle={{ color: 'hsl(220, 10%, 55%)' }} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Macro Breakdown Pie Chart */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h3 className="text-sm font-semibold mb-4">Macro Breakdown</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie data={macroData} cx="50%" cy="50%" innerRadius={60} outerRadius={110} paddingAngle={4} dataKey="value" label={({ name, value }) => `${name} ${value}%`}>
+                    {macroData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: 'hsl(220, 18%, 10%)', border: '1px solid hsl(220, 14%, 18%)', borderRadius: '8px', color: 'hsl(0, 0%, 95%)' }} />
+                  <Legend wrapperStyle={{ color: 'hsl(220, 10%, 55%)' }} />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           </div>
         )}
