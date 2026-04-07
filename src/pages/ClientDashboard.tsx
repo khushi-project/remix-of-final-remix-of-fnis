@@ -4,7 +4,7 @@ import { useNutrition } from '@/context/NutritionContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import {
-  User, Utensils, ClipboardCheck, CheckCircle, Save, X,
+  User, Utensils, ClipboardCheck, CheckCircle, Edit2, Save, X,
   Dumbbell, Plus, TrendingUp, Flame, Target, Clock,
 } from 'lucide-react';
 import {
