@@ -104,7 +104,6 @@ const ClientDashboard = () => {
   // Meal form
   const [showMealForm, setShowMealForm] = useState(false);
   const [mealForm, setMealForm] = useState({ name: '', calories: '', protein: '', carbs: '', fats: '', type: 'breakfast' as 'breakfast' | 'lunch' | 'dinner' | 'snack' });
-  const [editMealId, setEditMealId] = useState<string | null>(null);
   const [mealErrors, setMealErrors] = useState<Record<string, string>>({});
 
   if (!user) return null;
