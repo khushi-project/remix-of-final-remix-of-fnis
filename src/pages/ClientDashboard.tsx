@@ -529,18 +529,33 @@ const ClientDashboard = () => {
               <div key={cat}>
                 <h2 className="mb-3 font-display text-lg font-semibold">{cat}</h2>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {items.map(ex => (
-                    <div key={ex.id} className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30">
-                      <div className="flex items-center gap-2">
-                        <Dumbbell className="h-4 w-4 text-primary" />
-                        <h4 className="font-display font-semibold">{ex.name}</h4>
+                  {items.map(ex => {
+                    const isChecked = checkedWorkouts.has(ex.id);
+                    return (
+                      <div key={ex.id} className={`rounded-xl border bg-card p-4 transition-all ${isChecked ? 'border-primary/50 bg-primary/5' : 'border-border hover:border-primary/30'}`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            <Dumbbell className="h-4 w-4 text-primary" />
+                            <h4 className={`font-display font-semibold ${isChecked ? 'line-through text-muted-foreground' : ''}`}>{ex.name}</h4>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const next = new Set(checkedWorkouts);
+                              if (isChecked) next.delete(ex.id); else next.add(ex.id);
+                              setCheckedWorkouts(next);
+                            }}
+                            className={`rounded-full p-1.5 transition-colors ${isChecked ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground hover:border-primary hover:text-primary'}`}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
+                          <span>{ex.sets} sets × {ex.reps} reps</span>
+                          {ex.duration && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{ex.duration} min</span>}
+                        </div>
                       </div>
-                      <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
-                        <span>{ex.sets} sets × {ex.reps} reps</span>
-                        {ex.duration && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{ex.duration} min</span>}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
