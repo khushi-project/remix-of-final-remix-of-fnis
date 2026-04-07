@@ -426,7 +426,7 @@ const ClientDashboard = () => {
                       </select>
                     </div>
                   </div>
-                  <button type="submit" className="gradient-primary mt-4 rounded-lg px-6 py-2 text-sm font-bold text-primary-foreground">{editMealId ? 'Update' : 'Add'} Meal</button>
+                  <button type="submit" className="gradient-primary mt-4 rounded-lg px-6 py-2 text-sm font-bold text-primary-foreground">Add Meal</button>
                 </motion.form>
               )}
             </AnimatePresence>
