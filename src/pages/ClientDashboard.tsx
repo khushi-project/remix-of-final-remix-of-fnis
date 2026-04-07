@@ -402,7 +402,7 @@ const ClientDashboard = () => {
               {showMealForm && (
                 <motion.form initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} onSubmit={handleMealSubmit} className="overflow-hidden rounded-xl border border-border bg-card p-6">
                   <div className="mb-4 flex items-center justify-between">
-                    <h3 className="font-display font-semibold">{editMealId ? 'Edit Meal' : 'New Meal'}</h3>
+                    <h3 className="font-display font-semibold">New Meal</h3>
                     <button type="button" onClick={() => setShowMealForm(false)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
