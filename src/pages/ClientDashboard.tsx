@@ -98,10 +98,8 @@ const ClientDashboard = () => {
   const [mealInput, setMealInput] = useState('');
   const [selectedMealTime, setSelectedMealTime] = useState('Breakfast');
 
-  // Workout form
-  const [showWoForm, setShowWoForm] = useState(false);
-  const [woForm, setWoForm] = useState({ name: '', sets: '', reps: '', duration: '', category: 'Chest' });
-  const [woErrors, setWoErrors] = useState<Record<string, string>>({});
+  // Assigned exercises from admin
+  const assignedExercises = user ? getAssignedExercises(user.id) : [];
 
   // Meal form
   const [showMealForm, setShowMealForm] = useState(false);
