@@ -4,8 +4,8 @@ import { useNutrition } from '@/context/NutritionContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import {
-  User, Utensils, ClipboardCheck, CheckCircle, Edit2, Save, X,
-  Dumbbell, Plus, TrendingUp, Flame, Target, Clock,
+  User, Utensils, CheckCircle, Edit2, Save, X,
+  Dumbbell, TrendingUp, Flame, Target, Clock,
 } from 'lucide-react';
 import {
   getDietPlansForClient, acceptDietPlan, addMealLog, getMealLogs,
