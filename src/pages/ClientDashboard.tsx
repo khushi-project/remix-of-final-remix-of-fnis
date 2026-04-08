@@ -166,18 +166,6 @@ const ClientDashboard = () => {
     forceUpdate(n => n + 1);
   };
 
-  const handleAddExercise = (ev: React.FormEvent) => {
-    ev.preventDefault();
-    const e: Record<string, string> = {};
-    if (!woForm.name.trim()) e.name = 'Required';
-    if (!woForm.sets || +woForm.sets <= 0) e.sets = 'Required';
-    if (!woForm.reps || +woForm.reps <= 0) e.reps = 'Required';
-    setWoErrors(e);
-    if (Object.keys(e).length) return;
-    addExercise({ name: woForm.name, sets: +woForm.sets, reps: +woForm.reps, duration: woForm.duration ? +woForm.duration : undefined, category: woForm.category });
-    setWoForm({ name: '', sets: '', reps: '', duration: '', category: 'Chest' });
-    setShowWoForm(false);
-  };
 
   const handleMealSubmit = (ev: React.FormEvent) => {
     ev.preventDefault();
