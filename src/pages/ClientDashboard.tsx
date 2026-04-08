@@ -86,7 +86,7 @@ const CalorieRing = ({ consumed, goal }: { consumed: number; goal: number }) => 
 const ClientDashboard = () => {
   const { user, updateProfile } = useAuth();
   const { meals, exercises, dailyGoal, addMeal } = useNutrition();
-  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'diet' | 'meals' | 'workouts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'diet' | 'workouts'>('overview');
   const [checkedMeals, setCheckedMeals] = useState<Set<string>>(new Set());
   const [checkedWorkouts, setCheckedWorkouts] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState(false);
