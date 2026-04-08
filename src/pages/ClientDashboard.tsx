@@ -4,8 +4,8 @@ import { useNutrition } from '@/context/NutritionContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import {
-  User, Utensils, ClipboardCheck, CheckCircle, Edit2, Save, X,
-  Dumbbell, Plus, TrendingUp, Flame, Target, Clock,
+  User, Utensils, CheckCircle, Edit2, Save, X,
+  Dumbbell, TrendingUp, Flame, Target, Clock,
 } from 'lucide-react';
 import {
   getDietPlansForClient, acceptDietPlan, addMealLog, getMealLogs,
@@ -86,7 +86,7 @@ const CalorieRing = ({ consumed, goal }: { consumed: number; goal: number }) => 
 const ClientDashboard = () => {
   const { user, updateProfile } = useAuth();
   const { meals, exercises, dailyGoal, addMeal } = useNutrition();
-  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'diet' | 'meals' | 'workouts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'diet' | 'workouts'>('overview');
   const [checkedMeals, setCheckedMeals] = useState<Set<string>>(new Set());
   const [checkedWorkouts, setCheckedWorkouts] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState(false);
@@ -101,10 +101,6 @@ const ClientDashboard = () => {
   // Assigned exercises from admin
   const assignedExercises = user ? getAssignedExercises(user.id) : [];
 
-  // Meal form
-  const [showMealForm, setShowMealForm] = useState(false);
-  const [mealForm, setMealForm] = useState({ name: '', calories: '', protein: '', carbs: '', fats: '', type: 'breakfast' as 'breakfast' | 'lunch' | 'dinner' | 'snack' });
-  const [mealErrors, setMealErrors] = useState<Record<string, string>>({});
 
   if (!user) return null;
 
@@ -167,27 +163,11 @@ const ClientDashboard = () => {
   };
 
 
-  const handleMealSubmit = (ev: React.FormEvent) => {
-    ev.preventDefault();
-    const e: Record<string, string> = {};
-    if (!mealForm.name.trim()) e.name = 'Required';
-    if (!mealForm.calories || +mealForm.calories <= 0) e.calories = 'Must be > 0';
-    if (!mealForm.protein || +mealForm.protein < 0) e.protein = 'Required';
-    if (!mealForm.carbs || +mealForm.carbs < 0) e.carbs = 'Required';
-    if (!mealForm.fats || +mealForm.fats < 0) e.fats = 'Required';
-    setMealErrors(e);
-    if (Object.keys(e).length) return;
-    const data = { name: mealForm.name, calories: +mealForm.calories, protein: +mealForm.protein, carbs: +mealForm.carbs, fats: +mealForm.fats, type: mealForm.type };
-    addMeal(data);
-    setMealForm({ name: '', calories: '', protein: '', carbs: '', fats: '', type: 'breakfast' });
-    setShowMealForm(false);
-  };
 
   const tabs = [
     { key: 'overview' as const, label: 'Overview', icon: Flame },
     { key: 'profile' as const, label: 'Profile', icon: User },
     { key: 'diet' as const, label: 'Diet Plans', icon: Utensils },
-    { key: 'meals' as const, label: 'Meal Planner', icon: ClipboardCheck },
     { key: 'workouts' as const, label: 'Workouts', icon: Dumbbell },
   ];
 
@@ -345,8 +325,13 @@ const ClientDashboard = () => {
 
         {/* ══════════════════ DIET PLANS TAB ══════════════════ */}
         {activeTab === 'diet' && (
-          <div className="space-y-4 max-w-2xl">
-            <h2 className="font-display text-lg font-semibold">Your Diet Plans</h2>
+          <div className="space-y-6">
+            <div>
+              <h2 className="font-display text-2xl font-bold">Your Diet Plans</h2>
+              <p className="text-sm text-muted-foreground">Diet plans assigned by your trainer & your tracked meals</p>
+            </div>
+
+            {/* Assigned diet plans */}
             {dietPlans.length === 0 ? (
               <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">No diet plans assigned yet. Your trainer will create one for you.</div>
             ) : (
@@ -374,93 +359,50 @@ const ClientDashboard = () => {
                 </div>
               ))
             )}
-          </div>
-        )}
 
-        {/* ══════════════════ MEAL PLANNER TAB ══════════════════ */}
-        {activeTab === 'meals' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-display text-2xl font-bold">Meal Planner</h2>
-                <p className="text-sm text-muted-foreground">Plan and track your daily meals</p>
-              </div>
-              <button onClick={() => { setShowMealForm(!showMealForm); setMealForm({ name: '', calories: '', protein: '', carbs: '', fats: '', type: 'breakfast' }); }} className="gradient-primary inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-primary-foreground transition-transform hover:scale-105">
-                <Plus className="h-4 w-4" /> Add Meal
-              </button>
-            </div>
-
-            <AnimatePresence>
-              {showMealForm && (
-                <motion.form initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} onSubmit={handleMealSubmit} className="overflow-hidden rounded-xl border border-border bg-card p-6">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className="font-display font-semibold">New Meal</h3>
-                    <button type="button" onClick={() => setShowMealForm(false)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {[
-                      { key: 'name', label: 'Name', type: 'text', placeholder: 'e.g. Greek Yogurt' },
-                      { key: 'calories', label: 'Calories', type: 'number', placeholder: '0' },
-                      { key: 'protein', label: 'Protein (g)', type: 'number', placeholder: '0' },
-                      { key: 'carbs', label: 'Carbs (g)', type: 'number', placeholder: '0' },
-                      { key: 'fats', label: 'Fats (g)', type: 'number', placeholder: '0' },
-                    ].map(f => (
-                      <div key={f.key}>
-                        <label className="mb-1 block text-xs text-muted-foreground">{f.label}</label>
-                        <input type={f.type} value={mealForm[f.key as keyof typeof mealForm]} onChange={e => setMealForm({ ...mealForm, [f.key]: e.target.value })} placeholder={f.placeholder} className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
-                        {mealErrors[f.key] && <p className="mt-1 text-xs text-destructive">{mealErrors[f.key]}</p>}
+            {/* Tracked meals (from meal planner) */}
+            {meals.length > 0 && (
+              <>
+                <h2 className="font-display text-lg font-semibold mt-4">Tracked Meals</h2>
+                {mealTypes.map(type => {
+                  const filtered = meals.filter(m => m.type === type);
+                  if (!filtered.length) return null;
+                  return (
+                    <div key={type}>
+                      <h3 className="mb-3 font-display text-base font-semibold">{mealTypeLabels[type]}</h3>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {filtered.map(m => {
+                          const isChecked = checkedMeals.has(m.id);
+                          return (
+                            <div key={m.id} className={`rounded-xl border bg-card p-4 transition-all ${isChecked ? 'border-primary/50 bg-primary/5' : 'border-border hover:border-primary/30'}`}>
+                              <div className="flex items-start justify-between">
+                                <h4 className={`font-display font-semibold ${isChecked ? 'line-through text-muted-foreground' : ''}`}>{m.name}</h4>
+                                <button
+                                  onClick={() => {
+                                    const next = new Set(checkedMeals);
+                                    if (isChecked) next.delete(m.id); else next.add(m.id);
+                                    setCheckedMeals(next);
+                                  }}
+                                  className={`rounded-full p-1.5 transition-colors ${isChecked ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground hover:border-primary hover:text-primary'}`}
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </button>
+                              </div>
+                              <p className="mt-1 font-display text-xl font-bold text-primary">{m.calories} <span className="text-xs text-muted-foreground font-normal">kcal</span></p>
+                              <div className="mt-2 flex gap-3 text-xs text-muted-foreground">
+                                <span>P: {m.protein}g</span>
+                                <span>C: {m.carbs}g</span>
+                                <span>F: {m.fats}g</span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                    <div>
-                      <label className="mb-1 block text-xs text-muted-foreground">Type</label>
-                      <select value={mealForm.type} onChange={e => setMealForm({ ...mealForm, type: e.target.value as any })} className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
-                        {mealTypes.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-                      </select>
                     </div>
-                  </div>
-                  <button type="submit" className="gradient-primary mt-4 rounded-lg px-6 py-2 text-sm font-bold text-primary-foreground">Add Meal</button>
-                </motion.form>
-              )}
-            </AnimatePresence>
-
-            {/* Meal groups */}
-            {mealTypes.map(type => {
-              const filtered = meals.filter(m => m.type === type);
-              if (!filtered.length) return null;
-              return (
-                <div key={type}>
-                  <h2 className="mb-3 font-display text-lg font-semibold">{mealTypeLabels[type]}</h2>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {filtered.map(m => {
-                      const isChecked = checkedMeals.has(m.id);
-                      return (
-                        <div key={m.id} className={`rounded-xl border bg-card p-4 transition-all ${isChecked ? 'border-primary/50 bg-primary/5' : 'border-border hover:border-primary/30'}`}>
-                          <div className="flex items-start justify-between">
-                            <h4 className={`font-display font-semibold ${isChecked ? 'line-through text-muted-foreground' : ''}`}>{m.name}</h4>
-                            <button
-                              onClick={() => {
-                                const next = new Set(checkedMeals);
-                                if (isChecked) next.delete(m.id); else next.add(m.id);
-                                setCheckedMeals(next);
-                              }}
-                              className={`rounded-full p-1.5 transition-colors ${isChecked ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground hover:border-primary hover:text-primary'}`}
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </button>
-                          </div>
-                          <p className="mt-1 font-display text-xl font-bold text-primary">{m.calories} <span className="text-xs text-muted-foreground font-normal">kcal</span></p>
-                          <div className="mt-2 flex gap-3 text-xs text-muted-foreground">
-                            <span>P: {m.protein}g</span>
-                            <span>C: {m.carbs}g</span>
-                            <span>F: {m.fats}g</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </>
+            )}
           </div>
         )}
 

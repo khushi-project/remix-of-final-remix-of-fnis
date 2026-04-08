@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { User, Users, Utensils, Edit2, Save, X, Plus, Trash2 } from 'lucide-react';
+import { User, Users, Utensils, Edit2, Save, X, Trash2 } from 'lucide-react';
 import {
-  getTrainerClients, addTrainerClient, removeTrainerClient,
+  getTrainerClients,
   getDietPlansForTrainer, addDietPlan, updateDietPlan,
-  getClients, updateTrainer, getTrainerById,
+  updateTrainer,
   type DietPlan
 } from '@/services/mockData';
 
@@ -19,8 +19,6 @@ const TrainerDashboard = () => {
   const [editSpec, setEditSpec] = useState(user?.specialization || '');
   const [, forceUpdate] = useState(0);
 
-  // Add client form
-  const [selectedClientId, setSelectedClientId] = useState('');
 
   // Diet plan form
   const [dpTitle, setDpTitle] = useState('');
@@ -33,10 +31,6 @@ const TrainerDashboard = () => {
 
   const clients = getTrainerClients(user.id);
   const dietPlans = getDietPlansForTrainer(user.id);
-  const allClients = getClients();
-
-  // Clients not yet assigned to this trainer
-  const assignableClients = allClients.filter(c => !clients.find(tc => tc.clientId === c.id));
 
   const handleSaveProfile = () => {
     updateProfile({ name: editName, phone: editPhone, specialization: editSpec });
@@ -45,25 +39,6 @@ const TrainerDashboard = () => {
     setEditing(false);
   };
 
-  const handleAddClient = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedClientId) return;
-    const client = allClients.find(c => c.id === selectedClientId);
-    if (!client) return;
-    addTrainerClient({
-      trainerId: user.id,
-      clientId: client.id,
-      clientName: client.name,
-      clientEmail: client.email,
-    });
-    setSelectedClientId('');
-    forceUpdate(n => n + 1);
-  };
-
-  const handleRemoveClient = (clientId: string) => {
-    removeTrainerClient(user.id, clientId);
-    forceUpdate(n => n + 1);
-  };
 
   const handleCreateDietPlan = (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,37 +129,24 @@ const TrainerDashboard = () => {
         {/* Clients */}
         {activeTab === 'clients' && (
           <div className="max-w-2xl space-y-6">
-            <form onSubmit={handleAddClient} className="rounded-xl border border-border bg-card p-5 space-y-3">
-              <h3 className="font-display font-semibold">Assign Client</h3>
-              <div className="flex gap-3">
-                <select value={selectedClientId} onChange={e => setSelectedClientId(e.target.value)}
-                  className="flex-1 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
-                  <option value="">Select a client to assign</option>
-                  {assignableClients.map(c => <option key={c.id} value={c.id}>{c.name} ({c.email})</option>)}
-                </select>
-                <button type="submit" className="flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-colors">
-                  <Plus className="h-4 w-4" /> Assign
-                </button>
-              </div>
-              {assignableClients.length === 0 && <p className="text-xs text-muted-foreground">No unassigned clients available.</p>}
-            </form>
-
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-muted-foreground">My Clients ({clients.length})</h3>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h3 className="font-display font-semibold mb-4">My Clients ({clients.length})</h3>
               {clients.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No clients assigned yet.</p>
+                <p className="text-sm text-muted-foreground">No clients assigned yet. Admin will assign clients to you.</p>
               ) : (
-                clients.map(c => (
-                  <div key={c.clientId} className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium">{c.clientName}</p>
-                      <p className="text-xs text-muted-foreground">{c.clientEmail}</p>
+                <div className="space-y-2">
+                  {clients.map(c => (
+                    <div key={c.clientId} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                        {c.clientName.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{c.clientName}</p>
+                        <p className="text-xs text-muted-foreground">{c.clientEmail}</p>
+                      </div>
                     </div>
-                    <button onClick={() => handleRemoveClient(c.clientId)} className="text-destructive hover:text-destructive/80">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
           </div>
