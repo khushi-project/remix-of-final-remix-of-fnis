@@ -39,25 +39,6 @@ const TrainerDashboard = () => {
     setEditing(false);
   };
 
-  const handleAddClient = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedClientId) return;
-    const client = allClients.find(c => c.id === selectedClientId);
-    if (!client) return;
-    addTrainerClient({
-      trainerId: user.id,
-      clientId: client.id,
-      clientName: client.name,
-      clientEmail: client.email,
-    });
-    setSelectedClientId('');
-    forceUpdate(n => n + 1);
-  };
-
-  const handleRemoveClient = (clientId: string) => {
-    removeTrainerClient(user.id, clientId);
-    forceUpdate(n => n + 1);
-  };
 
   const handleCreateDietPlan = (e: React.FormEvent) => {
     e.preventDefault();
