@@ -101,10 +101,6 @@ const ClientDashboard = () => {
   // Assigned exercises from admin
   const assignedExercises = user ? getAssignedExercises(user.id) : [];
 
-  // Meal form
-  const [showMealForm, setShowMealForm] = useState(false);
-  const [mealForm, setMealForm] = useState({ name: '', calories: '', protein: '', carbs: '', fats: '', type: 'breakfast' as 'breakfast' | 'lunch' | 'dinner' | 'snack' });
-  const [mealErrors, setMealErrors] = useState<Record<string, string>>({});
 
   if (!user) return null;
 
