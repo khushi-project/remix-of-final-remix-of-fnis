@@ -187,7 +187,6 @@ const ClientDashboard = () => {
     { key: 'overview' as const, label: 'Overview', icon: Flame },
     { key: 'profile' as const, label: 'Profile', icon: User },
     { key: 'diet' as const, label: 'Diet Plans', icon: Utensils },
-    { key: 'meals' as const, label: 'Meal Planner', icon: ClipboardCheck },
     { key: 'workouts' as const, label: 'Workouts', icon: Dumbbell },
   ];
 
