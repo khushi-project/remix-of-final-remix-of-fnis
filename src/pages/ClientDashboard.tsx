@@ -140,12 +140,16 @@ const ClientDashboard = () => {
   const mealTypes: ('breakfast' | 'lunch' | 'dinner' | 'snack')[] = ['breakfast', 'lunch', 'dinner', 'snack'];
   const mealTypeLabels: Record<string, string> = { breakfast: '🌅 Breakfast', lunch: '☀️ Lunch', dinner: '🌙 Dinner', snack: '🍎 Snack' };
 
-  // Workout grouped
+  // Workout grouped — combine NutritionContext exercises + admin-assigned exercises
+  const allExerciseItems = [
+    ...exercises.map(e => ({ ...e, source: 'default' as const })),
+    ...assignedExercises.map(e => ({ id: e.id, name: e.name, sets: e.sets, reps: e.reps, duration: e.duration, category: e.category, source: 'assigned' as const })),
+  ];
   const groupedExercises = WORKOUT_CATEGORIES.reduce((acc, cat) => {
-    const items = exercises.filter(e => e.category === cat);
+    const items = allExerciseItems.filter(e => e.category === cat);
     if (items.length) acc[cat] = items;
     return acc;
-  }, {} as Record<string, typeof exercises>);
+  }, {} as Record<string, typeof allExerciseItems>);
 
   const handleSaveProfile = () => {
     const updates = { name: editName, phone: editPhone, joinWeight: editJoinWeight ? Number(editJoinWeight) : undefined, currentWeight: editCurrentWeight ? Number(editCurrentWeight) : undefined };
