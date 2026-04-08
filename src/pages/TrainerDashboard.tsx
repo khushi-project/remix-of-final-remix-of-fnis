@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { User, Users, Utensils, Edit2, Save, X, Plus, Trash2 } from 'lucide-react';
+import { User, Users, Utensils, Edit2, Save, X, Trash2 } from 'lucide-react';
 import {
-  getTrainerClients, addTrainerClient, removeTrainerClient,
+  getTrainerClients,
   getDietPlansForTrainer, addDietPlan, updateDietPlan,
-  getClients, updateTrainer, getTrainerById,
+  updateTrainer,
   type DietPlan
 } from '@/services/mockData';
 
