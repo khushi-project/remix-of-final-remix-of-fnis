@@ -163,21 +163,6 @@ const ClientDashboard = () => {
   };
 
 
-  const handleMealSubmit = (ev: React.FormEvent) => {
-    ev.preventDefault();
-    const e: Record<string, string> = {};
-    if (!mealForm.name.trim()) e.name = 'Required';
-    if (!mealForm.calories || +mealForm.calories <= 0) e.calories = 'Must be > 0';
-    if (!mealForm.protein || +mealForm.protein < 0) e.protein = 'Required';
-    if (!mealForm.carbs || +mealForm.carbs < 0) e.carbs = 'Required';
-    if (!mealForm.fats || +mealForm.fats < 0) e.fats = 'Required';
-    setMealErrors(e);
-    if (Object.keys(e).length) return;
-    const data = { name: mealForm.name, calories: +mealForm.calories, protein: +mealForm.protein, carbs: +mealForm.carbs, fats: +mealForm.fats, type: mealForm.type };
-    addMeal(data);
-    setMealForm({ name: '', calories: '', protein: '', carbs: '', fats: '', type: 'breakfast' });
-    setShowMealForm(false);
-  };
 
   const tabs = [
     { key: 'overview' as const, label: 'Overview', icon: Flame },
