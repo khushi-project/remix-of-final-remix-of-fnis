@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import {
   getDietPlansForClient, acceptDietPlan, addMealLog, getMealLogs,
-  getClientTrainer, getTrainerById, updateClient, type MealLog,
+  getClientTrainer, getTrainerById, updateClient, getAssignedExercises,
+  type MealLog, type AssignedExercise,
 } from '@/services/mockData';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
