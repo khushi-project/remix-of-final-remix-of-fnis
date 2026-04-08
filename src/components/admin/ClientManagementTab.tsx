@@ -1,17 +1,30 @@
-import React, { useState } from 'react';
-import { Trash2, Plus, UserPlus, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Trash2, Plus, UserPlus, X, Link, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getClients, addClient, removeClient, getClientTrainer, getDietPlansForClient, getTrainerById, type ClientProfile } from '@/services/mockData';
+import {
+  getClients, addClient, removeClient, getClientTrainer, getDietPlansForClient,
+  getTrainerById, getTrainers, addTrainerClient, removeTrainerClient,
+  type ClientProfile,
+} from '@/services/mockData';
+import { assignTrainerAPI, unassignTrainerAPI, isNetworkError } from '@/api/api';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
 const ClientManagementTab = () => {
+  const { toast } = useToast();
   const [, forceUpdate] = useState(0);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [goal, setGoal] = useState('');
   const [selectedClient, setSelectedClient] = useState<ClientProfile | null>(null);
+  const [assigningClient, setAssigningClient] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const clients = getClients();
+  const trainers = getTrainers();
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +37,51 @@ const ClientManagementTab = () => {
   const handleRemove = (id: string) => {
     removeClient(id);
     if (selectedClient?.id === id) setSelectedClient(null);
+    forceUpdate(n => n + 1);
+  };
+
+  const handleAssignTrainer = async (clientId: string, trainerId: string) => {
+    setLoading(true);
+    try {
+      await assignTrainerAPI(clientId, trainerId);
+      toast({ title: 'Trainer assigned', description: 'Trainer assigned via backend successfully.' });
+    } catch (err: any) {
+      if (!isNetworkError(err)) {
+        toast({ title: 'API Error', description: err.message, variant: 'destructive' });
+      }
+    }
+    // Always update local mock data so UI reflects change immediately
+    const trainer = trainers.find(t => t.id === trainerId);
+    const client = clients.find(c => c.id === clientId);
+    if (trainer && client) {
+      // Remove old assignment first
+      const oldRel = getClientTrainer(clientId);
+      if (oldRel) removeTrainerClient(oldRel.trainerId, clientId);
+      addTrainerClient({
+        trainerId,
+        clientId,
+        clientName: client.name,
+        clientEmail: client.email,
+      });
+    }
+    setAssigningClient(null);
+    setLoading(false);
+    forceUpdate(n => n + 1);
+  };
+
+  const handleUnassignTrainer = async (clientId: string) => {
+    setLoading(true);
+    try {
+      await unassignTrainerAPI(clientId);
+      toast({ title: 'Trainer unassigned', description: 'Trainer removed from client.' });
+    } catch (err: any) {
+      if (!isNetworkError(err)) {
+        toast({ title: 'API Error', description: err.message, variant: 'destructive' });
+      }
+    }
+    const rel = getClientTrainer(clientId);
+    if (rel) removeTrainerClient(rel.trainerId, clientId);
+    setLoading(false);
     forceUpdate(n => n + 1);
   };
 
@@ -55,20 +113,63 @@ const ClientManagementTab = () => {
           {clients.map(client => {
             const trainerRel = getClientTrainer(client.id);
             const trainer = trainerRel ? getTrainerById(trainerRel.trainerId) : undefined;
+            const isAssigning = assigningClient === client.id;
             return (
-              <div key={client.id} className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setSelectedClient(client)}>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/30 text-sm font-bold text-accent-foreground">
-                    {client.name.charAt(0)}
+              <div key={client.id} className="px-5 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 cursor-pointer" onClick={() => setSelectedClient(client)}>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/30 text-sm font-bold text-accent-foreground">
+                      {client.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{client.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {client.goal || 'No goal'} · {client.email}
+                        {trainer ? ` · Trainer: ${trainer.name}` : ''}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">{client.name}</p>
-                    <p className="text-xs text-muted-foreground">{client.goal || 'No goal'} · {client.email} {trainer ? `· Trainer: ${trainer.name}` : ''}</p>
+                  <div className="flex items-center gap-2">
+                    {/* Assign / Change Trainer button */}
+                    <button
+                      onClick={() => setAssigningClient(isAssigning ? null : client.id)}
+                      className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                    >
+                      <Link className="h-3 w-3" />
+                      {trainer ? 'Change Trainer' : 'Assign Trainer'}
+                    </button>
+                    {trainer && (
+                      <button
+                        onClick={() => handleUnassignTrainer(client.id)}
+                        disabled={loading}
+                        className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:border-destructive hover:bg-destructive/10 disabled:opacity-50"
+                      >
+                        Unassign
+                      </button>
+                    )}
+                    <button onClick={(e) => { e.stopPropagation(); handleRemove(client.id); }} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/20 hover:text-destructive" title="Remove client">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); handleRemove(client.id); }} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/20 hover:text-destructive" title="Remove client">
-                  <Trash2 className="h-4 w-4" />
-                </button>
+
+                {/* Trainer assignment dropdown */}
+                {isAssigning && (
+                  <div className="mt-3 flex items-center gap-3 pl-12">
+                    <Select onValueChange={(val) => handleAssignTrainer(client.id, val)}>
+                      <SelectTrigger className="w-[240px] bg-muted">
+                        <SelectValue placeholder="Select a trainer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {trainers.map(t => (
+                          <SelectItem key={t.id} value={t.id}>{t.name} — {t.specialization}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {loading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                    <button onClick={() => setAssigningClient(null)} className="text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -106,7 +207,6 @@ const ClientManagementTab = () => {
                   <div><p className="text-xs text-muted-foreground">Current Weight</p><p className="text-sm font-medium">{selectedClient.currentWeight ? `${selectedClient.currentWeight} kg` : 'Not set'}</p></div>
                 </div>
 
-                {/* Diet Plans */}
                 {dietPlans.length > 0 && (
                   <div className="mt-4">
                     <p className="text-xs text-muted-foreground mb-2">Diet Plans</p>
