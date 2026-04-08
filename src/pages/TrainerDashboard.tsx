@@ -19,8 +19,6 @@ const TrainerDashboard = () => {
   const [editSpec, setEditSpec] = useState(user?.specialization || '');
   const [, forceUpdate] = useState(0);
 
-  // Add client form
-  const [selectedClientId, setSelectedClientId] = useState('');
 
   // Diet plan form
   const [dpTitle, setDpTitle] = useState('');
