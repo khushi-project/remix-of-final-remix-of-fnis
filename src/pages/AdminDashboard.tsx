@@ -7,9 +7,10 @@ import ClientTasksTab from '@/components/admin/ClientTasksTab';
 import DietTasksTab from '@/components/admin/DietTasksTab';
 import TrainerManagementTab from '@/components/admin/TrainerManagementTab';
 import ClientManagementTab from '@/components/admin/ClientManagementTab';
-import { getTrainers, getClients, getDietPlans, getAllTrainerClients } from '@/services/mockData';
+import ExerciseManagementTab from '@/components/admin/ExerciseManagementTab';
+import { getTrainers, getClients, getDietPlans, getAllTrainerClients, getAllAssignedExercises } from '@/services/mockData';
 
-export type AdminTab = 'clients' | 'diet' | 'trainers' | 'manage-clients';
+export type AdminTab = 'clients' | 'diet' | 'trainers' | 'manage-clients' | 'exercises';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -66,6 +67,7 @@ const AdminDashboard = () => {
           {activeTab === 'diet' && <DietTasksTab />}
           {activeTab === 'trainers' && <TrainerManagementTab />}
           {activeTab === 'manage-clients' && <ClientManagementTab />}
+          {activeTab === 'exercises' && <ExerciseManagementTab />}
         </div>
       </main>
     </div>

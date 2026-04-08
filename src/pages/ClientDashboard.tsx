@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import {
   getDietPlansForClient, acceptDietPlan, addMealLog, getMealLogs,
-  getClientTrainer, getTrainerById, updateClient, type MealLog,
+  getClientTrainer, getTrainerById, updateClient, getAssignedExercises,
+  type MealLog, type AssignedExercise,
 } from '@/services/mockData';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -84,7 +85,7 @@ const CalorieRing = ({ consumed, goal }: { consumed: number; goal: number }) => 
 
 const ClientDashboard = () => {
   const { user, updateProfile } = useAuth();
-  const { meals, exercises, addExercise, dailyGoal, addMeal } = useNutrition();
+  const { meals, exercises, dailyGoal, addMeal } = useNutrition();
   const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'diet' | 'meals' | 'workouts'>('overview');
   const [checkedMeals, setCheckedMeals] = useState<Set<string>>(new Set());
   const [checkedWorkouts, setCheckedWorkouts] = useState<Set<string>>(new Set());
@@ -97,10 +98,8 @@ const ClientDashboard = () => {
   const [mealInput, setMealInput] = useState('');
   const [selectedMealTime, setSelectedMealTime] = useState('Breakfast');
 
-  // Workout form
-  const [showWoForm, setShowWoForm] = useState(false);
-  const [woForm, setWoForm] = useState({ name: '', sets: '', reps: '', duration: '', category: 'Chest' });
-  const [woErrors, setWoErrors] = useState<Record<string, string>>({});
+  // Assigned exercises from admin
+  const assignedExercises = user ? getAssignedExercises(user.id) : [];
 
   // Meal form
   const [showMealForm, setShowMealForm] = useState(false);
@@ -141,12 +140,16 @@ const ClientDashboard = () => {
   const mealTypes: ('breakfast' | 'lunch' | 'dinner' | 'snack')[] = ['breakfast', 'lunch', 'dinner', 'snack'];
   const mealTypeLabels: Record<string, string> = { breakfast: '🌅 Breakfast', lunch: '☀️ Lunch', dinner: '🌙 Dinner', snack: '🍎 Snack' };
 
-  // Workout grouped
+  // Workout grouped — combine NutritionContext exercises + admin-assigned exercises
+  const allExerciseItems = [
+    ...exercises.map(e => ({ ...e, source: 'default' as const })),
+    ...assignedExercises.map(e => ({ id: e.id, name: e.name, sets: e.sets, reps: e.reps, duration: e.duration, category: e.category, source: 'assigned' as const })),
+  ];
   const groupedExercises = WORKOUT_CATEGORIES.reduce((acc, cat) => {
-    const items = exercises.filter(e => e.category === cat);
+    const items = allExerciseItems.filter(e => e.category === cat);
     if (items.length) acc[cat] = items;
     return acc;
-  }, {} as Record<string, typeof exercises>);
+  }, {} as Record<string, typeof allExerciseItems>);
 
   const handleSaveProfile = () => {
     const updates = { name: editName, phone: editPhone, joinWeight: editJoinWeight ? Number(editJoinWeight) : undefined, currentWeight: editCurrentWeight ? Number(editCurrentWeight) : undefined };
@@ -163,18 +166,6 @@ const ClientDashboard = () => {
     forceUpdate(n => n + 1);
   };
 
-  const handleAddExercise = (ev: React.FormEvent) => {
-    ev.preventDefault();
-    const e: Record<string, string> = {};
-    if (!woForm.name.trim()) e.name = 'Required';
-    if (!woForm.sets || +woForm.sets <= 0) e.sets = 'Required';
-    if (!woForm.reps || +woForm.reps <= 0) e.reps = 'Required';
-    setWoErrors(e);
-    if (Object.keys(e).length) return;
-    addExercise({ name: woForm.name, sets: +woForm.sets, reps: +woForm.reps, duration: woForm.duration ? +woForm.duration : undefined, category: woForm.category });
-    setWoForm({ name: '', sets: '', reps: '', duration: '', category: 'Chest' });
-    setShowWoForm(false);
-  };
 
   const handleMealSubmit = (ev: React.FormEvent) => {
     ev.preventDefault();
@@ -476,54 +467,10 @@ const ClientDashboard = () => {
         {/* ══════════════════ WORKOUTS TAB ══════════════════ */}
         {activeTab === 'workouts' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-display text-2xl font-bold">Workouts</h2>
-                <p className="text-sm text-muted-foreground">Track your exercise routines</p>
-              </div>
-              <button onClick={() => setShowWoForm(!showWoForm)} className="gradient-primary inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-primary-foreground transition-transform hover:scale-105">
-                <Plus className="h-4 w-4" /> Add Exercise
-              </button>
+            <div>
+              <h2 className="font-display text-2xl font-bold">Your Workouts</h2>
+              <p className="text-sm text-muted-foreground">Exercises assigned by your admin / trainer</p>
             </div>
-
-            <AnimatePresence>
-              {showWoForm && (
-                <motion.form initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} onSubmit={handleAddExercise} className="overflow-hidden rounded-xl border border-border bg-card p-6">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className="font-display font-semibold">New Exercise</h3>
-                    <button type="button" onClick={() => setShowWoForm(false)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <div>
-                      <label className="mb-1 block text-xs text-muted-foreground">Exercise Name</label>
-                      <input type="text" value={woForm.name} onChange={e => setWoForm({ ...woForm, name: e.target.value })} placeholder="e.g. Bench Press" className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
-                      {woErrors.name && <p className="mt-1 text-xs text-destructive">{woErrors.name}</p>}
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-muted-foreground">Sets</label>
-                      <input type="number" value={woForm.sets} onChange={e => setWoForm({ ...woForm, sets: e.target.value })} placeholder="0" className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
-                      {woErrors.sets && <p className="mt-1 text-xs text-destructive">{woErrors.sets}</p>}
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-muted-foreground">Reps</label>
-                      <input type="number" value={woForm.reps} onChange={e => setWoForm({ ...woForm, reps: e.target.value })} placeholder="0" className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
-                      {woErrors.reps && <p className="mt-1 text-xs text-destructive">{woErrors.reps}</p>}
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-muted-foreground">Duration (min, optional)</label>
-                      <input type="number" value={woForm.duration} onChange={e => setWoForm({ ...woForm, duration: e.target.value })} placeholder="0" className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary" />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-muted-foreground">Category</label>
-                      <select value={woForm.category} onChange={e => setWoForm({ ...woForm, category: e.target.value })} className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
-                        {WORKOUT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <button type="submit" className="gradient-primary mt-4 rounded-lg px-6 py-2 text-sm font-bold text-primary-foreground">Add Exercise</button>
-                </motion.form>
-              )}
-            </AnimatePresence>
 
             {Object.entries(groupedExercises).map(([cat, items]) => (
               <div key={cat}>
@@ -561,7 +508,7 @@ const ClientDashboard = () => {
             ))}
 
             {Object.keys(groupedExercises).length === 0 && (
-              <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">No exercises added yet. Click "Add Exercise" to start tracking your workouts.</div>
+              <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">No exercises assigned yet. Your admin will assign workouts for you.</div>
             )}
           </div>
         )}
