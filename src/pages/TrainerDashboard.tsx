@@ -31,10 +31,6 @@ const TrainerDashboard = () => {
 
   const clients = getTrainerClients(user.id);
   const dietPlans = getDietPlansForTrainer(user.id);
-  const allClients = getClients();
-
-  // Clients not yet assigned to this trainer
-  const assignableClients = allClients.filter(c => !clients.find(tc => tc.clientId === c.id));
 
   const handleSaveProfile = () => {
     updateProfile({ name: editName, phone: editPhone, specialization: editSpec });
