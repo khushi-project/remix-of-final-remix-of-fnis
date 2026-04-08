@@ -67,6 +67,7 @@ const AdminDashboard = () => {
           {activeTab === 'diet' && <DietTasksTab />}
           {activeTab === 'trainers' && <TrainerManagementTab />}
           {activeTab === 'manage-clients' && <ClientManagementTab />}
+          {activeTab === 'exercises' && <ExerciseManagementTab />}
         </div>
       </main>
     </div>

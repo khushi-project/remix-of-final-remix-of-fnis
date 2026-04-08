@@ -10,7 +10,8 @@ import type { AdminTab } from '@/pages/AdminDashboard';
 const navItems: { label: string; tab: AdminTab; icon: React.ElementType }[] = [
   { label: 'Client Tasks', tab: 'clients', icon: LayoutDashboard },
   { label: 'Diet Management', tab: 'diet', icon: Utensils },
-  { label: 'Trainer Details', tab: 'trainers', icon: Dumbbell },
+  { label: 'Exercise Management', tab: 'exercises', icon: Dumbbell },
+  { label: 'Trainer Details', tab: 'trainers', icon: Users },
   { label: 'Client Details', tab: 'manage-clients', icon: UserCog },
 ];
 
