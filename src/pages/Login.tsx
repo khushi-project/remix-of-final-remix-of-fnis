@@ -28,10 +28,10 @@ const Login = () => {
     return !Object.keys(e).length;
   };
 
-  const handleSubmit = (ev: React.FormEvent) => {
+  const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
-    const result = login(email, password, role);
+    const result = await login(email, password, role);
     if (!result.success) {
       setErrors({ general: result.error });
       return;

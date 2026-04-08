@@ -32,10 +32,14 @@ const Register = () => {
     return !Object.keys(e).length;
   };
 
-  const handleSubmit = (ev: React.FormEvent) => {
+  const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
-    register(name, email, password, role);
+    const result = await register(name, email, password, role);
+    if (!result.success) {
+      setErrors({ general: result.error || 'Registration failed' });
+      return;
+    }
     if (role === 'trainer') navigate('/trainer-dashboard');
     else navigate('/client-dashboard');
   };
