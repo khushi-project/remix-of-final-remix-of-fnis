@@ -244,3 +244,34 @@ export const getClientsForTrainer = (trainerId: string): ClientProfile[] => {
     id: r.clientId, name: r.clientName, email: r.clientEmail, dateJoined: '',
   } as ClientProfile);
 };
+
+// ─── Assigned Exercises ─────────────────────────────────────
+export interface AssignedExercise {
+  id: string;
+  clientId: string;
+  name: string;
+  sets: number;
+  reps: number;
+  duration?: number;
+  category: string;
+  assignedAt: string;
+}
+
+const EX_KEY = 'fnis_assigned_exercises';
+
+export const getAssignedExercises = (clientId: string): AssignedExercise[] =>
+  get<AssignedExercise>(EX_KEY).filter(e => e.clientId === clientId);
+
+export const getAllAssignedExercises = (): AssignedExercise[] => get<AssignedExercise>(EX_KEY);
+
+export const addAssignedExercise = (ex: Omit<AssignedExercise, 'id' | 'assignedAt'>): AssignedExercise => {
+  const all = get<AssignedExercise>(EX_KEY);
+  const newEx: AssignedExercise = { ...ex, id: `ex-${Date.now()}`, assignedAt: new Date().toISOString() };
+  all.push(newEx);
+  set(EX_KEY, all);
+  return newEx;
+};
+
+export const removeAssignedExercise = (id: string) => {
+  set(EX_KEY, get<AssignedExercise>(EX_KEY).filter(e => e.id !== id));
+};
