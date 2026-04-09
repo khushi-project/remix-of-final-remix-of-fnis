@@ -327,43 +327,12 @@ const ClientDashboard = () => {
         {activeTab === 'diet' && (
           <div className="space-y-6">
             <div>
-              <h2 className="font-display text-2xl font-bold">Your Diet Plans</h2>
-              <p className="text-sm text-muted-foreground">Diet plans assigned by your trainer & your tracked meals</p>
+              <h2 className="font-display text-2xl font-bold">Tracked Meals</h2>
+              <p className="text-sm text-muted-foreground">Your daily meal tracking</p>
             </div>
 
-            {/* Assigned diet plans */}
-            {dietPlans.length === 0 ? (
-              <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">No diet plans assigned yet. Your trainer will create one for you.</div>
-            ) : (
-              dietPlans.map(plan => (
-                <div key={plan.id} className="rounded-xl border border-border bg-card p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-display font-semibold">{plan.title}</h3>
-                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${plan.status === 'accepted' ? 'bg-primary/10 text-primary' : 'bg-accent/10 text-accent-foreground'}`}>
-                      {plan.status === 'accepted' ? 'Accepted' : 'Pending'}
-                    </span>
-                  </div>
-                  <div className="space-y-2 mb-4">
-                    {plan.meals.map((meal: { time: string; description: string }, i: number) => (
-                      <div key={i} className="flex gap-3 text-sm">
-                        <span className="text-muted-foreground min-w-[80px]">{meal.time}</span>
-                        <span>{meal.description}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {plan.status === 'pending' && (
-                    <button onClick={() => handleAcceptPlan(plan.id)} className="flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-colors">
-                      <CheckCircle className="h-4 w-4" /> Accept Plan
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-
-            {/* Tracked meals (from meal planner) */}
-            {meals.length > 0 && (
+            {meals.length > 0 ? (
               <>
-                <h2 className="font-display text-lg font-semibold mt-4">Tracked Meals</h2>
                 {mealTypes.map(type => {
                   const filtered = meals.filter(m => m.type === type);
                   if (!filtered.length) return null;
@@ -402,6 +371,8 @@ const ClientDashboard = () => {
                   );
                 })}
               </>
+            ) : (
+              <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">No meals tracked yet.</div>
             )}
           </div>
         )}
