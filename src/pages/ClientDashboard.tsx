@@ -411,7 +411,9 @@ const ClientDashboard = () => {
           <div className="space-y-6">
             <div>
               <h2 className="font-display text-2xl font-bold">Your Workouts</h2>
-              <p className="text-sm text-muted-foreground">Exercises assigned by your admin / trainer</p>
+              <p className="text-sm text-muted-foreground">
+                {trainer ? `Assigned by: ${trainer.name}` : 'Exercises assigned by your admin / trainer'}
+              </p>
             </div>
 
             {Object.entries(groupedExercises).map(([cat, items]) => (
