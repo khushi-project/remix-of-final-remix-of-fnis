@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Trash2, CheckCircle } from 'lucide-react';
+import { CheckCircle, Trash2, ClipboardList } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getClients, getAllMealLogs } from '@/services/mockData';
+import { useAdminData } from '@/context/AdminContext';
 
 export interface ClientTask {
   id: string;
@@ -17,20 +17,8 @@ const statusColors: Record<string, string> = {
 };
 
 const ClientTasksTab = () => {
-  const clients = getClients();
-  const mealLogs = getAllMealLogs();
-
-  // Generate tasks from actual client data
-  const generateTasks = (): ClientTask[] => {
-    return clients.slice(0, 6).map((client, i) => ({
-      id: client.id,
-      clientName: client.name,
-      task: i % 3 === 0 ? 'Complete weekly plan' : i % 3 === 1 ? 'Log daily meals' : 'Follow diet plan',
-      status: (i % 3 === 0 ? 'pending' : i % 3 === 1 ? 'in-progress' : 'completed') as ClientTask['status'],
-    }));
-  };
-
-  const [clientTasks, setClientTasks] = useState<ClientTask[]>(generateTasks);
+  const { clients } = useAdminData();
+  const [clientTasks, setClientTasks] = useState<ClientTask[]>([]);
 
   const updateTaskStatus = (id: string) => {
     setClientTasks(prev =>
@@ -56,7 +44,7 @@ const ClientTasksTab = () => {
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Meal Logs</p>
-          <p className="text-2xl font-bold">{mealLogs.length}</p>
+          <p className="text-2xl font-bold">0</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Active Tasks</p>
@@ -69,28 +57,33 @@ const ClientTasksTab = () => {
           <h2 className="font-display font-bold">Client Tasks</h2>
         </div>
         <div className="divide-y divide-border">
-          {clientTasks.length === 0 && (
-            <p className="p-5 text-center text-sm text-muted-foreground">No tasks.</p>
-          )}
-          {clientTasks.map(task => (
-            <div key={task.id} className="flex items-center justify-between px-5 py-4">
-              <div>
-                <p className="text-sm font-medium">{task.task}</p>
-                <p className="text-xs text-muted-foreground">{task.clientName}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[task.status]}`}>
-                  {task.status}
-                </span>
-                <button onClick={() => updateTaskStatus(task.id)} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" title="Cycle status">
-                  <CheckCircle className="h-4 w-4" />
-                </button>
-                <button onClick={() => deleteTask(task.id)} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/20 hover:text-destructive" title="Delete">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+          {clientTasks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <ClipboardList className="h-10 w-10 text-muted-foreground/40 mb-3" />
+              <p className="text-sm text-muted-foreground">No tasks yet.</p>
+              <p className="text-xs text-muted-foreground mt-1">Tasks will appear here once connected to a database.</p>
             </div>
-          ))}
+          ) : (
+            clientTasks.map(task => (
+              <div key={task.id} className="flex items-center justify-between px-5 py-4">
+                <div>
+                  <p className="text-sm font-medium">{task.task}</p>
+                  <p className="text-xs text-muted-foreground">{task.clientName}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[task.status]}`}>
+                    {task.status}
+                  </span>
+                  <button onClick={() => updateTaskStatus(task.id)} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" title="Cycle status">
+                    <CheckCircle className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => deleteTask(task.id)} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/20 hover:text-destructive" title="Delete">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </motion.div>

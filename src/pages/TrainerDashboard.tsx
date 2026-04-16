@@ -2,23 +2,17 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { User, Users, Utensils, Edit2, Save, X, Trash2 } from 'lucide-react';
-import {
-  getTrainerClients,
-  getDietPlansForTrainer, addDietPlan, updateDietPlan,
-  updateTrainer,
-  type DietPlan
-} from '@/services/mockData';
+import { User, Users, Utensils, Edit2, Save, X, Trash2, Loader2 } from 'lucide-react';
+import { useTrainerDashboard } from '@/hooks/useTrainerDashboard';
 
 const TrainerDashboard = () => {
   const { user, updateProfile } = useAuth();
+  const { clients, dietPlans, isLoading, error, addDietPlan, updateDietPlan } = useTrainerDashboard();
   const [activeTab, setActiveTab] = useState<'profile' | 'clients' | 'diet'>('profile');
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(user?.name || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
   const [editSpec, setEditSpec] = useState(user?.specialization || '');
-  const [, forceUpdate] = useState(0);
-
 
   // Diet plan form
   const [dpTitle, setDpTitle] = useState('');
@@ -29,35 +23,28 @@ const TrainerDashboard = () => {
 
   if (!user) return null;
 
-  const clients = getTrainerClients(user.id);
-  const dietPlans = getDietPlansForTrainer(user.id);
-
   const handleSaveProfile = () => {
     updateProfile({ name: editName, phone: editPhone, specialization: editSpec });
-    // Also update trainer store
-    updateTrainer(user.id, { name: editName, phone: editPhone, specialization: editSpec });
+    // TODO: Also update via API when connected
     setEditing(false);
   };
-
 
   const handleCreateDietPlan = (e: React.FormEvent) => {
     e.preventDefault();
     if (!dpTitle.trim() || !dpClientId) return;
-    addDietPlan({ trainerId: user.id, clientId: dpClientId, title: dpTitle, meals: dpMeals.filter(m => m.description) });
+    addDietPlan({ clientId: dpClientId, title: dpTitle, meals: dpMeals.filter(m => m.description) });
     setDpTitle(''); setDpClientId('');
     setDpMeals([{ time: 'Breakfast', description: '' }]);
-    forceUpdate(n => n + 1);
   };
 
-  const handleStartEditPlan = (plan: DietPlan) => {
+  const handleStartEditPlan = (plan: typeof dietPlans[0]) => {
     setEditingPlan(plan.id);
     setEditPlanMeals([...plan.meals]);
   };
 
   const handleSavePlanEdit = (planId: string) => {
-    updateDietPlan(planId, { meals: editPlanMeals.filter(m => m.description) });
+    updateDietPlan(planId, editPlanMeals.filter(m => m.description));
     setEditingPlan(null);
-    forceUpdate(n => n + 1);
   };
 
   const tabs = [
@@ -66,11 +53,27 @@ const TrainerDashboard = () => {
     { key: 'diet' as const, label: `Diet Plans (${dietPlans.length})`, icon: Utensils },
   ];
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 pt-24 pb-12 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 pt-24 pb-12">
         <h1 className="font-display text-2xl font-bold mb-2">Trainer Dashboard</h1>
+
+        {error && (
+          <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>
+        )}
+
         <div className="flex gap-4 mb-6">
           <div className="rounded-lg bg-primary/10 border border-primary/20 px-4 py-2 text-sm">
             <span className="text-muted-foreground">Total Clients:</span> <span className="font-bold text-primary">{clients.length}</span>
@@ -132,7 +135,11 @@ const TrainerDashboard = () => {
             <div className="rounded-xl border border-border bg-card p-5">
               <h3 className="font-display font-semibold mb-4">My Clients ({clients.length})</h3>
               {clients.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No clients assigned yet. Admin will assign clients to you.</p>
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Users className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                  <p className="text-sm text-muted-foreground">No clients assigned yet.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Admin will assign clients to you.</p>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {clients.map(c => (
@@ -177,51 +184,59 @@ const TrainerDashboard = () => {
               <button type="submit" className="w-full rounded-lg bg-primary/10 py-2.5 text-sm font-medium text-primary hover:bg-primary/20 transition-colors">Create Plan</button>
             </form>
 
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-muted-foreground">Existing Plans ({dietPlans.length})</h3>
-              {dietPlans.map(plan => {
-                const clientName = clients.find(c => c.clientId === plan.clientId)?.clientName || 'Unknown';
-                return (
-                  <div key={plan.id} className="rounded-xl border border-border bg-card p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h4 className="font-display font-semibold">{plan.title}</h4>
-                        <p className="text-xs text-muted-foreground">For: {clientName}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`rounded-full px-3 py-1 text-xs font-medium ${plan.status === 'accepted' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>{plan.status}</span>
-                        {editingPlan !== plan.id && (
-                          <button onClick={() => handleStartEditPlan(plan)} className="text-sm text-primary hover:underline"><Edit2 className="h-3 w-3" /></button>
-                        )}
-                      </div>
-                    </div>
-                    {editingPlan === plan.id ? (
-                      <div className="space-y-2">
-                        {editPlanMeals.map((meal, i) => (
-                          <div key={i} className="grid grid-cols-[120px_1fr] gap-2">
-                            <input value={meal.time} onChange={e => { const m = [...editPlanMeals]; m[i].time = e.target.value; setEditPlanMeals(m); }} className="rounded-lg border border-border bg-muted px-2 py-2 text-sm text-foreground outline-none" />
-                            <input value={meal.description} onChange={e => { const m = [...editPlanMeals]; m[i].description = e.target.value; setEditPlanMeals(m); }} className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none" />
-                          </div>
-                        ))}
-                        <div className="flex gap-2">
-                          <button onClick={() => handleSavePlanEdit(plan.id)} className="text-sm text-primary hover:underline">Save</button>
-                          <button onClick={() => setEditingPlan(null)} className="text-sm text-muted-foreground hover:underline">Cancel</button>
+            {dietPlans.length === 0 ? (
+              <div className="rounded-xl border border-border bg-card p-8 text-center">
+                <Utensils className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">No diet plans created yet.</p>
+                <p className="text-xs text-muted-foreground mt-1">Create a plan above to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-muted-foreground">Existing Plans ({dietPlans.length})</h3>
+                {dietPlans.map(plan => {
+                  const clientName = clients.find(c => c.clientId === plan.clientId)?.clientName || 'Unknown';
+                  return (
+                    <div key={plan.id} className="rounded-xl border border-border bg-card p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-display font-semibold">{plan.title}</h4>
+                          <p className="text-xs text-muted-foreground">For: {clientName}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`rounded-full px-3 py-1 text-xs font-medium ${plan.status === 'accepted' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>{plan.status}</span>
+                          {editingPlan !== plan.id && (
+                            <button onClick={() => handleStartEditPlan(plan)} className="text-sm text-primary hover:underline"><Edit2 className="h-3 w-3" /></button>
+                          )}
                         </div>
                       </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {plan.meals.map((meal, i) => (
-                          <div key={i} className="flex gap-3 text-sm">
-                            <span className="text-muted-foreground min-w-[100px]">{meal.time}</span>
-                            <span>{meal.description}</span>
+                      {editingPlan === plan.id ? (
+                        <div className="space-y-2">
+                          {editPlanMeals.map((meal, i) => (
+                            <div key={i} className="grid grid-cols-[120px_1fr] gap-2">
+                              <input value={meal.time} onChange={e => { const m = [...editPlanMeals]; m[i].time = e.target.value; setEditPlanMeals(m); }} className="rounded-lg border border-border bg-muted px-2 py-2 text-sm text-foreground outline-none" />
+                              <input value={meal.description} onChange={e => { const m = [...editPlanMeals]; m[i].description = e.target.value; setEditPlanMeals(m); }} className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground outline-none" />
+                            </div>
+                          ))}
+                          <div className="flex gap-2">
+                            <button onClick={() => handleSavePlanEdit(plan.id)} className="text-sm text-primary hover:underline">Save</button>
+                            <button onClick={() => setEditingPlan(null)} className="text-sm text-muted-foreground hover:underline">Cancel</button>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          {plan.meals.map((meal, i) => (
+                            <div key={i} className="flex gap-3 text-sm">
+                              <span className="text-muted-foreground min-w-[100px]">{meal.time}</span>
+                              <span>{meal.description}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </main>

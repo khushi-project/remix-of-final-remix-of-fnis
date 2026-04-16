@@ -1,34 +1,30 @@
 import React, { useState } from 'react';
 import { Trash2, Plus, UserPlus, X, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getTrainers, addTrainer, removeTrainer, getTrainerClients, getDietPlansForTrainer, type TrainerProfile } from '@/services/mockData';
+import { useAdminData } from '@/context/AdminContext';
+import type { AdminTrainer } from '@/hooks/useAdminDashboard';
 
 const TrainerManagementTab = () => {
-  const [, forceUpdate] = useState(0);
+  const { trainers, trainerClientMappings, addTrainer, removeTrainer } = useAdminData();
   const [name, setName] = useState('');
   const [specialization, setSpecialization] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [selectedTrainer, setSelectedTrainer] = useState<TrainerProfile | null>(null);
-
-  const trainers = getTrainers();
+  const [selectedTrainer, setSelectedTrainer] = useState<AdminTrainer | null>(null);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !specialization.trim()) return;
     addTrainer({ name: name.trim(), email: email.trim(), phone: phone.trim(), specialization: specialization.trim() });
     setName(''); setSpecialization(''); setPhone(''); setEmail('');
-    forceUpdate(n => n + 1);
   };
 
   const handleRemove = (id: string) => {
     removeTrainer(id);
     if (selectedTrainer?.id === id) setSelectedTrainer(null);
-    forceUpdate(n => n + 1);
   };
 
-  const trainerClients = (trainerId: string) => getTrainerClients(trainerId);
-  const trainerDietPlans = (trainerId: string) => getDietPlansForTrainer(trainerId);
+  const trainerClients = (trainerId: string) => trainerClientMappings.filter(m => m.trainerId === trainerId);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -54,26 +50,33 @@ const TrainerManagementTab = () => {
           <h2 className="font-display font-bold">All Trainers ({trainers.length})</h2>
         </div>
         <div className="divide-y divide-border">
-          {trainers.length === 0 && <p className="p-5 text-center text-sm text-muted-foreground">No trainers added yet.</p>}
-          {trainers.map(trainer => {
-            const clients = trainerClients(trainer.id);
-            return (
-              <div key={trainer.id} className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setSelectedTrainer(trainer)}>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                    {trainer.name.charAt(0)}
+          {trainers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Users className="h-10 w-10 text-muted-foreground/40 mb-3" />
+              <p className="text-sm text-muted-foreground">No trainers added yet.</p>
+              <p className="text-xs text-muted-foreground mt-1">Add a trainer using the form above.</p>
+            </div>
+          ) : (
+            trainers.map(trainer => {
+              const clients = trainerClients(trainer.id);
+              return (
+                <div key={trainer.id} className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setSelectedTrainer(trainer)}>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                      {trainer.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{trainer.name}</p>
+                      <p className="text-xs text-muted-foreground">{trainer.specialization} · {trainer.email} · {clients.length} clients</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">{trainer.name}</p>
-                    <p className="text-xs text-muted-foreground">{trainer.specialization} · {trainer.email} · {clients.length} clients</p>
-                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); handleRemove(trainer.id); }} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/20 hover:text-destructive" title="Remove trainer">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); handleRemove(trainer.id); }} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/20 hover:text-destructive" title="Remove trainer">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -100,10 +103,8 @@ const TrainerManagementTab = () => {
                 <div><p className="text-xs text-muted-foreground">Phone</p><p className="text-sm font-medium">{selectedTrainer.phone || 'Not set'}</p></div>
                 <div><p className="text-xs text-muted-foreground">Date Joined</p><p className="text-sm font-medium">{selectedTrainer.dateJoined}</p></div>
                 <div><p className="text-xs text-muted-foreground">Total Clients</p><p className="text-sm font-medium">{trainerClients(selectedTrainer.id).length}</p></div>
-                <div><p className="text-xs text-muted-foreground">Diet Plans Created</p><p className="text-sm font-medium">{trainerDietPlans(selectedTrainer.id).length}</p></div>
               </div>
 
-              {/* Assigned Clients */}
               {trainerClients(selectedTrainer.id).length > 0 && (
                 <div className="mt-4">
                   <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1"><Users className="h-3 w-3" /> Assigned Clients</p>
