@@ -1,51 +1,23 @@
 import React, { useState } from 'react';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, Utensils } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getTrainers, getClients, getDietPlans, addDietPlan } from '@/services/mockData';
-import { createDietAPI, isNetworkError } from '@/api/api';
+import { useAdminData } from '@/context/AdminContext';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 
 const DietTasksTab = () => {
-  const { toast } = useToast();
-  const [, forceUpdate] = useState(0);
+  const { trainers, clients, dietPlans, addDietPlan } = useAdminData();
   const [newMeal, setNewMeal] = useState('');
   const [newCalories, setNewCalories] = useState('');
   const [newTime, setNewTime] = useState<'Breakfast' | 'Lunch' | 'Dinner'>('Breakfast');
   const [newClientId, setNewClientId] = useState('');
   const [newTrainerId, setNewTrainerId] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const trainers = getTrainers();
-  const clients = getClients();
-  const dietPlans = getDietPlans();
-
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMeal.trim() || !newCalories || !newClientId || !newTrainerId) return;
 
-    setLoading(true);
-
-    // Try backend first
-    try {
-      await createDietAPI({
-        clientId: newClientId,
-        trainerId: newTrainerId,
-        title: newMeal,
-        meals: [{ name: newMeal, calories: Number(newCalories), time: newTime }],
-      });
-      toast({ title: 'Diet plan created', description: 'Saved to backend successfully.' });
-    } catch (err: any) {
-      if (isNetworkError(err)) {
-        toast({ title: 'Offline mode', description: 'Backend unavailable — saved locally.', variant: 'default' });
-      } else {
-        toast({ title: 'API Error', description: err.message, variant: 'destructive' });
-      }
-    }
-
-    // Always save locally so UI updates immediately
     addDietPlan({
       trainerId: newTrainerId,
       clientId: newClientId,
@@ -53,8 +25,6 @@ const DietTasksTab = () => {
       meals: [{ time: newTime, description: `${newMeal} - ${newCalories} cal` }],
     });
     setNewMeal(''); setNewCalories(''); setNewClientId(''); setNewTrainerId('');
-    setLoading(false);
-    forceUpdate(n => n + 1);
   };
 
   const getTrainerName = (id: string) => trainers.find(t => t.id === id)?.name || id;
@@ -80,18 +50,25 @@ const DietTasksTab = () => {
           <Select value={newClientId} onValueChange={setNewClientId}>
             <SelectTrigger className="bg-muted"><SelectValue placeholder="Select Client" /></SelectTrigger>
             <SelectContent>
-              {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              {clients.length === 0 ? (
+                <SelectItem value="none" disabled>No clients yet</SelectItem>
+              ) : (
+                clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)
+              )}
             </SelectContent>
           </Select>
           <Select value={newTrainerId} onValueChange={setNewTrainerId}>
             <SelectTrigger className="bg-muted"><SelectValue placeholder="Select Trainer" /></SelectTrigger>
             <SelectContent>
-              {trainers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+              {trainers.length === 0 ? (
+                <SelectItem value="none" disabled>No trainers yet</SelectItem>
+              ) : (
+                trainers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)
+              )}
             </SelectContent>
           </Select>
-          <button type="submit" disabled={loading} className="gradient-primary rounded-lg py-2 text-sm font-bold text-primary-foreground transition-transform hover:scale-[1.02] flex items-center justify-center gap-2 disabled:opacity-50">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            {loading ? 'Saving...' : 'Assign Diet'}
+          <button type="submit" className="gradient-primary rounded-lg py-2 text-sm font-bold text-primary-foreground transition-transform hover:scale-[1.02] flex items-center justify-center gap-2">
+            <Plus className="h-4 w-4" /> Assign Diet
           </button>
         </form>
       </div>
@@ -100,25 +77,32 @@ const DietTasksTab = () => {
         <div className="border-b border-border px-5 py-3">
           <h2 className="font-display font-bold">Assigned Diet Plans ({dietPlans.length})</h2>
         </div>
-        <div className="divide-y divide-border">
-          {dietPlans.length === 0 && <p className="p-5 text-center text-sm text-muted-foreground">No diet plans assigned yet.</p>}
-          {dietPlans.map(plan => (
-            <div key={plan.id} className="flex items-center justify-between px-5 py-4">
-              <div>
-                <p className="text-sm font-medium">{plan.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  Client: {getClientName(plan.clientId)} · Trainer: {getTrainerName(plan.trainerId)} ·
-                  <span className={plan.status === 'accepted' ? ' text-primary' : ' text-yellow-500'}> {plan.status}</span>
-                </p>
+        {dietPlans.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Utensils className="h-10 w-10 text-muted-foreground/40 mb-3" />
+            <p className="text-sm text-muted-foreground">No diet plans assigned yet.</p>
+            <p className="text-xs text-muted-foreground mt-1">Add trainers and clients first, then assign diet plans.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {dietPlans.map(plan => (
+              <div key={plan.id} className="flex items-center justify-between px-5 py-4">
+                <div>
+                  <p className="text-sm font-medium">{plan.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Client: {getClientName(plan.clientId)} · Trainer: {getTrainerName(plan.trainerId)} ·
+                    <span className={plan.status === 'accepted' ? ' text-primary' : ' text-yellow-500'}> {plan.status}</span>
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  {plan.meals.map((m, i) => (
+                    <span key={i} className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">{m.time}: {m.description}</span>
+                  ))}
+                </div>
               </div>
-              <div className="flex gap-2">
-                {plan.meals.map((m, i) => (
-                  <span key={i} className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">{m.time}: {m.description}</span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </motion.div>
   );
