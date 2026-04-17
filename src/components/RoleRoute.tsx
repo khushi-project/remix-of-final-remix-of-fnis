@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { type UserRole } from '@/services/mockAuth';
+import type { UserRole } from '@/types';
 
 const RoleRoute = ({ children, role }: { children: React.ReactNode; role: UserRole }) => {
   const { isAuthenticated, user } = useAuth();

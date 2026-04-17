@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { type UserRole } from '@/services/mockAuth';
+import type { UserRole } from '@/types';
 import { Dumbbell, Eye, EyeOff } from 'lucide-react';
 
 const ROLES: { value: UserRole; label: string }[] = [

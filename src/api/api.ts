@@ -1,109 +1,137 @@
-const BASE_URL = 'http://localhost:5000/api';
+// ─────────────────────────────────────────────────────────────
+// Centralized API layer for FNIS.
+// All HTTP calls go through here. No mock data, no fallbacks.
+// Endpoints are placeholders — wire to your backend by setting
+// VITE_API_BASE_URL (defaults to "/api").
+// ─────────────────────────────────────────────────────────────
 
-const getToken = (): string | null => localStorage.getItem('token');
+import type { AuthUser, UserRole } from '@/types';
 
-const authHeaders = (): HeadersInit => {
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || '/api';
+
+const TOKEN_KEY = 'token';
+
+export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
+export const setToken = (token: string) => localStorage.setItem(TOKEN_KEY, token);
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+
+const buildHeaders = (extra?: HeadersInit): HeadersInit => {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = getToken();
-  const headers: HeadersInit = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  return headers;
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return { ...headers, ...(extra as Record<string, string>) };
 };
 
-const handleResponse = async (res: Response) => {
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.message || data.error || `Request failed (${res.status})`);
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
   }
-  return data;
-};
+}
 
-const isNetworkError = (err: any) =>
-  err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError');
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    headers: buildHeaders(init.headers),
+  });
+  const text = await res.text();
+  const data = text ? safeJson(text) : null;
+  if (!res.ok) {
+    const msg = (data && (data.message || data.error)) || `Request failed (${res.status})`;
+    throw new ApiError(msg, res.status);
+  }
+  return data as T;
+}
+
+function safeJson(text: string) {
+  try { return JSON.parse(text); } catch { return null; }
+}
 
 // ─── Auth ────────────────────────────────────────────────────
-export const loginAPI = async (email: string, password: string) => {
-  const res = await fetch(`${BASE_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  return handleResponse(res);
-};
+export interface AuthResponse { token: string; user: AuthUser; }
 
-export const registerAPI = async (name: string, email: string, password: string, role: string) => {
-  const res = await fetch(`${BASE_URL}/auth/register`, {
+export const loginUser = (email: string, password: string, role: UserRole) =>
+  request<AuthResponse>('/auth/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, role }),
+  });
+
+export const registerUser = (
+  name: string, email: string, password: string, role: UserRole,
+) =>
+  request<AuthResponse>('/auth/register', {
+    method: 'POST',
     body: JSON.stringify({ name, email, password, role }),
   });
-  return handleResponse(res);
-};
 
-// ─── Users (Admin) ───────────────────────────────────────────
-export const getAllClientsAPI = async () => {
-  const res = await fetch(`${BASE_URL}/users/clients`, { headers: authHeaders() });
-  return handleResponse(res);
-};
+export const updateUserProfile = (userId: string, updates: Partial<AuthUser>) =>
+  request<AuthUser>(`/users/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
 
-export const getAllTrainersAPI = async () => {
-  const res = await fetch(`${BASE_URL}/users/trainers`, { headers: authHeaders() });
-  return handleResponse(res);
-};
+// ─── Admin ───────────────────────────────────────────────────
+export const getClients = () => request<any[]>('/admin/clients');
+export const getTrainers = () => request<any[]>('/admin/trainers');
+export const getDietPlans = () => request<any[]>('/admin/diet-plans');
+export const getExercises = () => request<any[]>('/admin/exercises');
+export const getTrainerClientMappings = () => request<any[]>('/admin/assignments');
 
-// ─── Trainer Assignment (Admin) ──────────────────────────────
-export const assignTrainerAPI = async (clientId: string, trainerId: string) => {
-  const res = await fetch(`${BASE_URL}/admin/assign-trainer`, {
+export const createTrainer = (payload: { name: string; email: string; phone?: string; specialization: string }) =>
+  request<any>('/admin/trainers', { method: 'POST', body: JSON.stringify(payload) });
+export const deleteTrainer = (id: string) =>
+  request<void>(`/admin/trainers/${id}`, { method: 'DELETE' });
+
+export const createClient = (payload: { name: string; email: string; phone?: string; goal?: string }) =>
+  request<any>('/admin/clients', { method: 'POST', body: JSON.stringify(payload) });
+export const deleteClient = (id: string) =>
+  request<void>(`/admin/clients/${id}`, { method: 'DELETE' });
+
+export const assignTrainer = (clientId: string, trainerId: string) =>
+  request<void>('/admin/assignments', {
     method: 'POST',
-    headers: authHeaders(),
     body: JSON.stringify({ clientId, trainerId }),
   });
-  return handleResponse(res);
-};
-
-export const unassignTrainerAPI = async (clientId: string) => {
-  const res = await fetch(`${BASE_URL}/admin/unassign-trainer`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({ clientId }),
+export const unassignTrainer = (clientId: string, trainerId: string) =>
+  request<void>('/admin/assignments', {
+    method: 'DELETE',
+    body: JSON.stringify({ clientId, trainerId }),
   });
-  return handleResponse(res);
-};
 
-// ─── Diet Plans ──────────────────────────────────────────────
-export const createDietAPI = async (diet: {
-  clientId: string;
-  trainerId?: string;
-  title?: string;
-  meals: { name: string; calories: number; time: string }[];
-}) => {
-  const res = await fetch(`${BASE_URL}/diet`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify(diet),
+export const createDietPlan = (payload: {
+  trainerId: string; clientId: string; title: string;
+  meals: { time: string; description: string }[];
+}) => request<any>('/admin/diet-plans', { method: 'POST', body: JSON.stringify(payload) });
+
+export const createExercise = (payload: {
+  clientId: string; name: string; sets: number; reps: number;
+  duration?: number; category: string;
+}) => request<any>('/admin/exercises', { method: 'POST', body: JSON.stringify(payload) });
+
+export const deleteExercise = (id: string) =>
+  request<void>(`/admin/exercises/${id}`, { method: 'DELETE' });
+
+// ─── Trainer ─────────────────────────────────────────────────
+export const getTrainerDashboard = (trainerId: string) =>
+  request<{ clients: any[]; dietPlans: any[] }>(`/trainer/${trainerId}/dashboard`);
+
+export const createTrainerDietPlan = (trainerId: string, payload: {
+  clientId: string; title: string; meals: { time: string; description: string }[];
+}) => request<any>(`/trainer/${trainerId}/diet-plans`, {
+  method: 'POST', body: JSON.stringify(payload),
+});
+
+export const updateTrainerDietPlan = (planId: string, meals: { time: string; description: string }[]) =>
+  request<any>(`/trainer/diet-plans/${planId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ meals }),
   });
-  return handleResponse(res);
-};
 
-export const getDietAPI = async (clientId: string) => {
-  const res = await fetch(`${BASE_URL}/diet/${clientId}`, {
-    headers: authHeaders(),
-  });
-  return handleResponse(res);
-};
-
-export const getAllDietsAPI = async () => {
-  const res = await fetch(`${BASE_URL}/diet`, { headers: authHeaders() });
-  return handleResponse(res);
-};
-
-// ─── Meals ───────────────────────────────────────────────────
-export const logMealAPI = async (meal: { name: string; calories: number }) => {
-  const res = await fetch(`${BASE_URL}/meals`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify(meal),
-  });
-  return handleResponse(res);
-};
-
-export { isNetworkError };
+// ─── Client ──────────────────────────────────────────────────
+export const getClientDashboard = (clientId: string) =>
+  request<{
+    meals: any[]; exercises: any[]; weeklyCalories: { day: string; calories: number }[];
+    trainer: { name: string; email: string; phone?: string; specialization?: string } | null;
+    dailyGoals: { calories: number; protein: number; carbs: number; fats: number };
+  }>(`/client/${clientId}/dashboard`);

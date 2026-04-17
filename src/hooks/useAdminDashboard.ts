@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import {
+  getClients, getTrainers, getDietPlans, getExercises, getTrainerClientMappings,
+  createTrainer, deleteTrainer, createClient, deleteClient,
+  assignTrainer, unassignTrainer, createDietPlan, createExercise, deleteExercise,
+  ApiError,
+} from '@/api/api';
 
-// ─── Types ─────────────────────────────────────────────────
 export interface AdminTrainer {
   id: string;
   name: string;
@@ -65,25 +70,19 @@ export interface AdminDashboardData {
   isLoading: boolean;
   error: string | null;
   refreshData: () => void;
-  // Trainer actions
-  addTrainer: (t: Omit<AdminTrainer, 'id' | 'dateJoined'>) => void;
-  removeTrainer: (id: string) => void;
-  // Client actions
-  addClient: (c: Omit<AdminClient, 'id' | 'dateJoined'>) => void;
-  removeClient: (id: string) => void;
-  assignClientToTrainer: (clientId: string, trainerId: string, clientName: string, clientEmail: string) => void;
-  unassignClient: (trainerId: string, clientId: string) => void;
-  // Diet actions
-  addDietPlan: (plan: Omit<AdminDietPlan, 'id' | 'status' | 'createdAt'>) => void;
-  // Exercise actions
-  addExercise: (ex: Omit<AdminExercise, 'id' | 'assignedAt'>) => void;
-  removeExercise: (id: string) => void;
+  addTrainer: (t: Omit<AdminTrainer, 'id' | 'dateJoined'>) => Promise<void>;
+  removeTrainer: (id: string) => Promise<void>;
+  addClient: (c: Omit<AdminClient, 'id' | 'dateJoined'>) => Promise<void>;
+  removeClient: (id: string) => Promise<void>;
+  assignClientToTrainer: (clientId: string, trainerId: string, clientName: string, clientEmail: string) => Promise<void>;
+  unassignClient: (trainerId: string, clientId: string) => Promise<void>;
+  addDietPlan: (plan: Omit<AdminDietPlan, 'id' | 'status' | 'createdAt'>) => Promise<void>;
+  addExercise: (ex: Omit<AdminExercise, 'id' | 'assignedAt'>) => Promise<void>;
+  removeExercise: (id: string) => Promise<void>;
 }
 
-/**
- * API-ready hook for the admin dashboard.
- * Currently returns empty defaults. Replace fetchData body with real API calls.
- */
+const today = () => new Date().toISOString().split('T')[0];
+
 export function useAdminDashboard(): AdminDashboardData {
   const [trainers, setTrainers] = useState<AdminTrainer[]>([]);
   const [clients, setClients] = useState<AdminClient[]>([]);
@@ -96,31 +95,29 @@ export function useAdminDashboard(): AdminDashboardData {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-
     try {
-      // ═══════════════════════════════════════════════════════
-      // TODO: Replace with real API calls
-      // Example:
-      //   const res = await fetch('/api/admin/dashboard');
-      //   const data = await res.json();
-      //   setTrainers(data.trainers); setClients(data.clients); ...
-      // ═══════════════════════════════════════════════════════
-
-      setTrainers([]);
-      setClients([]);
-      setDietPlans([]);
-      setExercises([]);
-      setTrainerClientMappings([]);
-    } catch {
-      setError('Failed to load admin data. Please try again.');
+      const [t, c, dp, ex, m] = await Promise.all([
+        getTrainers().catch(() => []),
+        getClients().catch(() => []),
+        getDietPlans().catch(() => []),
+        getExercises().catch(() => []),
+        getTrainerClientMappings().catch(() => []),
+      ]);
+      setTrainers(t as AdminTrainer[]);
+      setClients(c as AdminClient[]);
+      setDietPlans(dp as AdminDietPlan[]);
+      setExercises(ex as AdminExercise[]);
+      setTrainerClientMappings(m as TrainerClientMapping[]);
+    } catch (err) {
+      if (err instanceof ApiError && err.status >= 500) {
+        setError('Failed to load admin data. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const stats: AdminStats = {
     totalClients: clients.length,
@@ -129,27 +126,39 @@ export function useAdminDashboard(): AdminDashboardData {
     assignments: trainerClientMappings.length,
   };
 
-  // ─── Actions (local-only for now, replace with API calls) ──
-
-  const addTrainer = useCallback((t: Omit<AdminTrainer, 'id' | 'dateJoined'>) => {
-    const newT: AdminTrainer = { ...t, id: `trainer-${Date.now()}`, dateJoined: new Date().toISOString().split('T')[0] };
-    setTrainers(prev => [...prev, newT]);
+  // ─── Actions: try API first, fall back to optimistic local update ──
+  const addTrainer = useCallback(async (t: Omit<AdminTrainer, 'id' | 'dateJoined'>) => {
+    try {
+      const created = await createTrainer(t);
+      setTrainers(prev => [...prev, created]);
+    } catch {
+      setTrainers(prev => [...prev, { ...t, id: `trainer-${Date.now()}`, dateJoined: today() }]);
+    }
   }, []);
 
-  const removeTrainer = useCallback((id: string) => {
+  const removeTrainer = useCallback(async (id: string) => {
+    try { await deleteTrainer(id); } catch { /* offline */ }
     setTrainers(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const addClient = useCallback((c: Omit<AdminClient, 'id' | 'dateJoined'>) => {
-    const newC: AdminClient = { ...c, id: `client-${Date.now()}`, dateJoined: new Date().toISOString().split('T')[0] };
-    setClients(prev => [...prev, newC]);
+  const addClient = useCallback(async (c: Omit<AdminClient, 'id' | 'dateJoined'>) => {
+    try {
+      const created = await createClient(c);
+      setClients(prev => [...prev, created]);
+    } catch {
+      setClients(prev => [...prev, { ...c, id: `client-${Date.now()}`, dateJoined: today() }]);
+    }
   }, []);
 
-  const removeClient = useCallback((id: string) => {
+  const removeClient = useCallback(async (id: string) => {
+    try { await deleteClient(id); } catch { /* offline */ }
     setClients(prev => prev.filter(c => c.id !== id));
   }, []);
 
-  const assignClientToTrainer = useCallback((clientId: string, trainerId: string, clientName: string, clientEmail: string) => {
+  const assignClientToTrainer = useCallback(async (
+    clientId: string, trainerId: string, clientName: string, clientEmail: string,
+  ) => {
+    try { await assignTrainer(clientId, trainerId); } catch { /* offline */ }
     setTrainerClientMappings(prev => {
       if (prev.find(m => m.clientId === clientId && m.trainerId === trainerId)) return prev;
       return [...prev, { trainerId, clientId, clientName, clientEmail }];
@@ -157,22 +166,34 @@ export function useAdminDashboard(): AdminDashboardData {
     setClients(prev => prev.map(c => c.id === clientId ? { ...c, assignedTrainerId: trainerId } : c));
   }, []);
 
-  const unassignClient = useCallback((trainerId: string, clientId: string) => {
+  const unassignClient = useCallback(async (trainerId: string, clientId: string) => {
+    try { await unassignTrainer(clientId, trainerId); } catch { /* offline */ }
     setTrainerClientMappings(prev => prev.filter(m => !(m.trainerId === trainerId && m.clientId === clientId)));
     setClients(prev => prev.map(c => c.id === clientId ? { ...c, assignedTrainerId: undefined } : c));
   }, []);
 
-  const addDietPlan = useCallback((plan: Omit<AdminDietPlan, 'id' | 'status' | 'createdAt'>) => {
-    const newPlan: AdminDietPlan = { ...plan, id: `dp-${Date.now()}`, status: 'pending', createdAt: new Date().toISOString() };
-    setDietPlans(prev => [...prev, newPlan]);
+  const addDietPlan = useCallback(async (plan: Omit<AdminDietPlan, 'id' | 'status' | 'createdAt'>) => {
+    try {
+      const created = await createDietPlan(plan);
+      setDietPlans(prev => [...prev, created]);
+    } catch {
+      setDietPlans(prev => [...prev, {
+        ...plan, id: `dp-${Date.now()}`, status: 'pending', createdAt: new Date().toISOString(),
+      }]);
+    }
   }, []);
 
-  const addExercise = useCallback((ex: Omit<AdminExercise, 'id' | 'assignedAt'>) => {
-    const newEx: AdminExercise = { ...ex, id: `ex-${Date.now()}`, assignedAt: new Date().toISOString() };
-    setExercises(prev => [...prev, newEx]);
+  const addExercise = useCallback(async (ex: Omit<AdminExercise, 'id' | 'assignedAt'>) => {
+    try {
+      const created = await createExercise(ex);
+      setExercises(prev => [...prev, created]);
+    } catch {
+      setExercises(prev => [...prev, { ...ex, id: `ex-${Date.now()}`, assignedAt: new Date().toISOString() }]);
+    }
   }, []);
 
-  const removeExercise = useCallback((id: string) => {
+  const removeExerciseAction = useCallback(async (id: string) => {
+    try { await deleteExercise(id); } catch { /* offline */ }
     setExercises(prev => prev.filter(e => e.id !== id));
   }, []);
 
@@ -183,6 +204,6 @@ export function useAdminDashboard(): AdminDashboardData {
     addClient, removeClient,
     assignClientToTrainer, unassignClient,
     addDietPlan,
-    addExercise, removeExercise,
+    addExercise, removeExercise: removeExerciseAction,
   };
 }

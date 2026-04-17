@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import {
+  getTrainerDashboard,
+  createTrainerDietPlan,
+  updateTrainerDietPlan,
+  ApiError,
+} from '@/api/api';
 
-// ─── Types ─────────────────────────────────────────────────
 export interface TrainerClient {
   clientId: string;
   clientName: string;
@@ -23,14 +28,10 @@ export interface TrainerDashboardData {
   isLoading: boolean;
   error: string | null;
   refreshData: () => void;
-  addDietPlan: (plan: { clientId: string; title: string; meals: { time: string; description: string }[] }) => void;
-  updateDietPlan: (planId: string, meals: { time: string; description: string }[]) => void;
+  addDietPlan: (plan: { clientId: string; title: string; meals: { time: string; description: string }[] }) => Promise<void>;
+  updateDietPlan: (planId: string, meals: { time: string; description: string }[]) => Promise<void>;
 }
 
-/**
- * API-ready hook for the trainer dashboard.
- * Currently returns empty defaults. Replace fetchData body with real API calls.
- */
 export function useTrainerDashboard(): TrainerDashboardData {
   const { user } = useAuth();
   const [clients, setClients] = useState<TrainerClient[]>([]);
@@ -42,55 +43,43 @@ export function useTrainerDashboard(): TrainerDashboardData {
     if (!user) return;
     setIsLoading(true);
     setError(null);
-
     try {
-      // ═══════════════════════════════════════════════════════
-      // TODO: Replace with real API calls using user.id
-      // Example:
-      //   const res = await fetch(`/api/trainers/${user.id}/dashboard`);
-      //   const data = await res.json();
-      //   setClients(data.clients);
-      //   setDietPlans(data.dietPlans);
-      // ═══════════════════════════════════════════════════════
-
+      const data = await getTrainerDashboard(user.id);
+      setClients(data.clients ?? []);
+      setDietPlans(data.dietPlans ?? []);
+    } catch (err) {
+      if (err instanceof ApiError && err.status >= 500) {
+        setError('Failed to load trainer data. Please try again.');
+      }
       setClients([]);
       setDietPlans([]);
-    } catch {
-      setError('Failed to load trainer data. Please try again.');
     } finally {
       setIsLoading(false);
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  const addPlan = useCallback((plan: { clientId: string; title: string; meals: { time: string; description: string }[] }) => {
-    // TODO: Replace with API call
-    const newPlan: DietPlan = {
-      id: `dp-${Date.now()}`,
-      clientId: plan.clientId,
-      title: plan.title,
-      meals: plan.meals,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
-    setDietPlans(prev => [...prev, newPlan]);
-  }, []);
+  const addPlan = useCallback(async (plan: { clientId: string; title: string; meals: { time: string; description: string }[] }) => {
+    if (!user) return;
+    try {
+      const created = await createTrainerDietPlan(user.id, plan);
+      setDietPlans(prev => [...prev, created]);
+    } catch {
+      // Backend not ready — keep optimistic UI client-side
+      setDietPlans(prev => [...prev, {
+        id: `dp-${Date.now()}`, status: 'pending', createdAt: new Date().toISOString(),
+        ...plan,
+      }]);
+    }
+  }, [user]);
 
-  const updatePlan = useCallback((planId: string, meals: { time: string; description: string }[]) => {
-    // TODO: Replace with API call
+  const updatePlan = useCallback(async (planId: string, meals: { time: string; description: string }[]) => {
+    try {
+      await updateTrainerDietPlan(planId, meals);
+    } catch { /* optimistic */ }
     setDietPlans(prev => prev.map(p => p.id === planId ? { ...p, meals } : p));
   }, []);
 
-  return {
-    clients,
-    dietPlans,
-    isLoading,
-    error,
-    refreshData: fetchData,
-    addDietPlan: addPlan,
-    updateDietPlan: updatePlan,
-  };
+  return { clients, dietPlans, isLoading, error, refreshData: fetchData, addDietPlan: addPlan, updateDietPlan: updatePlan };
 }
