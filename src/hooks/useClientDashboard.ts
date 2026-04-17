@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { getClientDashboard, ApiError } from '@/api/api';
 
 // ─── Types ─────────────────────────────────────────────────
 export interface ClientMeal {
@@ -61,68 +62,51 @@ export interface ClientDashboardData {
   refreshData: () => void;
 }
 
+const DEFAULT_GOALS: DailyGoals = { calories: 2200, protein: 150, carbs: 250, fats: 70 };
+const EMPTY_WEEK: WeeklyCalorieEntry[] = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+  .map(day => ({ day, calories: 0 }));
+
 /**
  * API-ready hook for the client dashboard.
- *
- * Currently returns empty/default values. When a backend is connected,
- * replace the body of `fetchData` with actual API calls using `user.id`.
+ * Fetches GET /api/client/:id/dashboard. If the backend is not yet
+ * connected, the UI shows clean empty states (no mock data).
  */
 export function useClientDashboard(): ClientDashboardData {
   const { user } = useAuth();
   const [meals, setMeals] = useState<ClientMeal[]>([]);
   const [exercises, setExercises] = useState<ClientExercise[]>([]);
-  const [weeklyCalories, setWeeklyCalories] = useState<WeeklyCalorieEntry[]>([]);
+  const [weeklyCalories, setWeeklyCalories] = useState<WeeklyCalorieEntry[]>(EMPTY_WEEK);
+  const [dailyGoals, setDailyGoals] = useState<DailyGoals>(DEFAULT_GOALS);
   const [trainer, setTrainer] = useState<TrainerInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const dailyGoals: DailyGoals = {
-    calories: 2200,
-    protein: 150,
-    carbs: 250,
-    fats: 70,
-  };
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
     setError(null);
-
     try {
-      // ═══════════════════════════════════════════════════════
-      // TODO: Replace with real API calls using user.id
-      // Example:
-      //   const res = await fetch(`/api/clients/${user.id}/dashboard`);
-      //   const data = await res.json();
-      //   setMeals(data.meals);
-      //   setExercises(data.exercises);
-      //   setWeeklyCalories(data.weeklyCalories);
-      //   setTrainer(data.trainer);
-      // ═══════════════════════════════════════════════════════
-
-      // For now, set empty data
+      const data = await getClientDashboard(user.id);
+      setMeals(data.meals ?? []);
+      setExercises(data.exercises ?? []);
+      setWeeklyCalories(data.weeklyCalories?.length ? data.weeklyCalories : EMPTY_WEEK);
+      setTrainer(data.trainer ?? null);
+      if (data.dailyGoals) setDailyGoals(data.dailyGoals);
+    } catch (err) {
+      // No backend yet → render empty state, don't surface scary errors.
+      if (err instanceof ApiError && err.status >= 500) {
+        setError('Failed to load dashboard data. Please try again.');
+      }
       setMeals([]);
       setExercises([]);
-      setWeeklyCalories([
-        { day: 'Mon', calories: 0 },
-        { day: 'Tue', calories: 0 },
-        { day: 'Wed', calories: 0 },
-        { day: 'Thu', calories: 0 },
-        { day: 'Fri', calories: 0 },
-        { day: 'Sat', calories: 0 },
-        { day: 'Sun', calories: 0 },
-      ]);
+      setWeeklyCalories(EMPTY_WEEK);
       setTrainer(null);
-    } catch (err) {
-      setError('Failed to load dashboard data. Please try again.');
     } finally {
       setIsLoading(false);
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const totals = {
     calories: meals.reduce((s, m) => s + m.calories, 0),
@@ -134,14 +118,7 @@ export function useClientDashboard(): ClientDashboardData {
   };
 
   return {
-    meals,
-    exercises,
-    dailyGoals,
-    weeklyCalories,
-    trainer,
-    totals,
-    isLoading,
-    error,
-    refreshData: fetchData,
+    meals, exercises, dailyGoals, weeklyCalories, trainer,
+    totals, isLoading, error, refreshData: fetchData,
   };
 }
