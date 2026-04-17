@@ -1,165 +1,68 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { loginAPI, registerAPI } from '@/api/api';
 import {
-  MOCK_ADMIN_ACCOUNT,
-  MOCK_USER_ACCOUNT,
-  type AuthUser as User,
-  type UserRole,
-} from '@/services/mockAuth';
-import { addRegisteredUser, getTrainers, getClients, addTrainer, addClient } from '@/services/mockData';
+  loginUser, registerUser, updateUserProfile,
+  setToken, clearToken,
+} from '@/api/api';
+import type { AuthUser, UserRole } from '@/types';
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  loading: boolean;
   login: (email: string, password: string, role: UserRole) => Promise<{ success: boolean; error?: string }>;
   register: (name: string, email: string, password: string, role: UserRole) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  updateProfile: (updates: Partial<User>) => void;
-  loading: boolean;
+  updateProfile: (updates: Partial<AuthUser>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEYS = {
-  user: 'fnis_user',
-  token: 'token',
-  isAdmin: 'isAdmin',
-};
+const USER_KEY = 'fnis_user';
 
-const getStoredUser = (): User | null => {
-  const savedUser = localStorage.getItem(STORAGE_KEYS.user);
-  const isAdmin = localStorage.getItem(STORAGE_KEYS.isAdmin) === 'true';
-
-  if (!savedUser) return isAdmin ? MOCK_ADMIN_ACCOUNT.user : null;
-
+const getStoredUser = (): AuthUser | null => {
   try {
-    const parsedUser = JSON.parse(savedUser) as User;
-    if (isAdmin) {
-      return { ...MOCK_ADMIN_ACCOUNT.user, ...parsedUser, role: 'admin' };
-    }
-    return parsedUser;
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? (JSON.parse(raw) as AuthUser) : null;
   } catch {
-    return isAdmin ? MOCK_ADMIN_ACCOUNT.user : null;
+    return null;
   }
 };
 
+const persistUser = (user: AuthUser | null) => {
+  if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+  else localStorage.removeItem(USER_KEY);
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(getStoredUser);
+  const [user, setUser] = useState<AuthUser | null>(getStoredUser);
   const [loading, setLoading] = useState(false);
 
-  const persistUser = (nextUser: User, isAdmin = false) => {
-    setUser(nextUser);
-    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(nextUser));
-    if (isAdmin) {
-      localStorage.setItem(STORAGE_KEYS.isAdmin, 'true');
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.isAdmin);
-    }
-  };
-
-  const login = async (email: string, password: string, role: UserRole): Promise<{ success: boolean; error?: string }> => {
-    // Admin login stays mock-based
-    if (role === 'admin') {
-      const normalizedLogin = email.trim().toLowerCase();
-      if (
-        normalizedLogin === MOCK_ADMIN_ACCOUNT.username ||
-        normalizedLogin === MOCK_ADMIN_ACCOUNT.user.email.toLowerCase()
-      ) {
-        if (password === MOCK_ADMIN_ACCOUNT.password) {
-          persistUser(MOCK_ADMIN_ACCOUNT.user, true);
-          return { success: true };
-        }
-        return { success: false, error: 'Invalid admin credentials' };
-      }
-      return { success: false, error: 'Invalid admin credentials' };
-    }
-
-    // Try real backend first, fall back to mock
+  const login: AuthContextType['login'] = async (email, password, role) => {
     setLoading(true);
     try {
-      const data = await loginAPI(email, password);
-      const token = data.token;
-      const backendUser = data.user;
-
-      localStorage.setItem(STORAGE_KEYS.token, token);
-
-      const u: User = {
-        id: backendUser._id || backendUser.id || `${role}-${Date.now()}`,
-        name: backendUser.name || email.split('@')[0],
-        email: backendUser.email || email,
-        age: backendUser.age || 0,
-        weight: backendUser.weight || 0,
-        height: backendUser.height || 0,
-        goal: backendUser.goal || '',
-        role: backendUser.role || role,
-      };
+      const { token, user: u } = await loginUser(email, password, role);
+      setToken(token);
+      setUser(u);
       persistUser(u);
       return { success: true };
     } catch (err: any) {
-      // If backend is unreachable, fall back to mock login
-      if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
-        const u: User = {
-          ...MOCK_USER_ACCOUNT.user,
-          id: `${role}-${Date.now()}`,
-          email,
-          role,
-          name: email.split('@')[0],
-        };
-        persistUser(u);
-        return { success: true };
-      }
-      return { success: false, error: err.message || 'Login failed' };
+      return { success: false, error: err?.message || 'Login failed' };
     } finally {
       setLoading(false);
     }
   };
 
-  const register = async (name: string, email: string, password: string, role: UserRole): Promise<{ success: boolean; error?: string }> => {
+  const register: AuthContextType['register'] = async (name, email, password, role) => {
     setLoading(true);
     try {
-      const data = await registerAPI(name, email, password, role);
-      const token = data.token;
-      const backendUser = data.user;
-
-      if (token) localStorage.setItem(STORAGE_KEYS.token, token);
-
-      const u: User = {
-        id: backendUser?._id || backendUser?.id || `${role}-${Date.now()}`,
-        name: backendUser?.name || name,
-        email: backendUser?.email || email,
-        age: backendUser?.age || 0,
-        weight: backendUser?.weight || 0,
-        height: backendUser?.height || 0,
-        goal: backendUser?.goal || '',
-        role: backendUser?.role || role,
-      };
+      const { token, user: u } = await registerUser(name, email, password, role);
+      setToken(token);
+      setUser(u);
       persistUser(u);
-      addRegisteredUser({ id: u.id, name: u.name, email: u.email, role: u.role });
-      if (role === 'trainer') {
-        const trainers = getTrainers();
-        if (!trainers.find(t => t.email === email)) addTrainer({ name, email, phone: '', specialization: '' });
-      } else if (role === 'client') {
-        const clients = getClients();
-        if (!clients.find(c => c.email === email)) addClient({ name, email, phone: '', goal: '' });
-      }
       return { success: true };
     } catch (err: any) {
-      // Fallback to mock if backend is down
-      if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
-        const u: User = { ...MOCK_USER_ACCOUNT.user, id: `${role}-${Date.now()}`, name, email, role };
-        persistUser(u);
-        addRegisteredUser({ id: u.id, name: u.name, email: u.email, role: u.role });
-        if (role === 'trainer') {
-          const trainers = getTrainers();
-          if (!trainers.find(t => t.email === email)) addTrainer({ name, email, phone: '', specialization: '' });
-        } else if (role === 'client') {
-          const clients = getClients();
-          if (!clients.find(c => c.email === email)) addClient({ name, email, phone: '', goal: '' });
-        }
-        return { success: true };
-      }
-      return { success: false, error: err.message || 'Registration failed' };
+      return { success: false, error: err?.message || 'Registration failed' };
     } finally {
       setLoading(false);
     }
@@ -167,19 +70,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem(STORAGE_KEYS.user);
-    localStorage.removeItem(STORAGE_KEYS.token);
-    localStorage.removeItem(STORAGE_KEYS.isAdmin);
+    persistUser(null);
+    clearToken();
   };
 
-  const updateProfile = (updates: Partial<User>) => {
+  const updateProfile = async (updates: Partial<AuthUser>) => {
     if (!user) return;
-    const updated = { ...user, ...updates, email: user.email };
-    persistUser(updated, updated.role === 'admin');
+    // Optimistic update — replace with the value the server returns when available.
+    const optimistic = { ...user, ...updates, email: user.email };
+    setUser(optimistic);
+    persistUser(optimistic);
+    try {
+      const updated = await updateUserProfile(user.id, updates);
+      setUser(updated);
+      persistUser(updated);
+    } catch {
+      /* keep optimistic update; surfacing errors is up to the caller */
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isAdmin: user?.role === 'admin', login, register, logout, updateProfile, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isAdmin: user?.role === 'admin',
+        loading,
+        login,
+        register,
+        logout,
+        updateProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
