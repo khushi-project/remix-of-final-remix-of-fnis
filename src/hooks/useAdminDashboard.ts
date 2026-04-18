@@ -103,11 +103,11 @@ export function useAdminDashboard(): AdminDashboardData {
         getExercises().catch(() => []),
         getTrainerClientMappings().catch(() => []),
       ]);
-      setTrainers(t as AdminTrainer[]);
-      setClients(c as AdminClient[]);
-      setDietPlans(dp as AdminDietPlan[]);
-      setExercises(ex as AdminExercise[]);
-      setTrainerClientMappings(m as TrainerClientMapping[]);
+      setTrainers((t ?? []) as AdminTrainer[]);
+      setClients((c ?? []) as AdminClient[]);
+      setDietPlans((dp ?? []) as AdminDietPlan[]);
+      setExercises((ex ?? []) as AdminExercise[]);
+      setTrainerClientMappings((m ?? []) as TrainerClientMapping[]);
     } catch (err) {
       if (err instanceof ApiError && err.status >= 500) {
         setError('Failed to load admin data. Please try again.');
