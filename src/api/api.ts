@@ -6,6 +6,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { AuthUser, UserRole } from '@/types';
+import { mockAuth, USE_MOCK_AUTH } from './mockAuthProvider';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || '/api';
 
@@ -51,25 +52,31 @@ function safeJson(text: string) {
 // ─── Auth ────────────────────────────────────────────────────
 export interface AuthResponse { token: string; user: AuthUser; }
 
-export const loginUser = (email: string, password: string, role: UserRole) =>
-  request<AuthResponse>('/auth/login', {
+export const loginUser = (email: string, password: string, role: UserRole) => {
+  if (USE_MOCK_AUTH) return mockAuth.login(email, password, role);
+  return request<AuthResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password, role }),
   });
+};
 
 export const registerUser = (
   name: string, email: string, password: string, role: UserRole,
-) =>
-  request<AuthResponse>('/auth/register', {
+) => {
+  if (USE_MOCK_AUTH) return mockAuth.register(name, email, password, role);
+  return request<AuthResponse>('/auth/register', {
     method: 'POST',
     body: JSON.stringify({ name, email, password, role }),
   });
+};
 
-export const updateUserProfile = (userId: string, updates: Partial<AuthUser>) =>
-  request<AuthUser>(`/users/${userId}`, {
+export const updateUserProfile = (userId: string, updates: Partial<AuthUser>) => {
+  if (USE_MOCK_AUTH) return mockAuth.updateProfile(userId, updates);
+  return request<AuthUser>(`/users/${userId}`, {
     method: 'PATCH',
     body: JSON.stringify(updates),
   });
+};
 
 // ─── Admin ───────────────────────────────────────────────────
 export const getClients = () => request<any[]>('/admin/clients');
